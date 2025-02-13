@@ -7,10 +7,11 @@ import { defineJobs, } from './jobs.js';
 import { clearSpyopDrag } from './governor.js';
 import { defineIndustry, setPowerGrid, gridDefs, clearGrids } from './industry.js';
 import { defineGovernment, defineGarrison, buildGarrison, commisionGarrison, foreignGov } from './civics.js';
-import { races, shapeShift, renderPsychicPowers } from './races.js';
+import { races, shapeShift, renderPsychicPowers, renderSupernatural } from './races.js';
 import { drawEvolution, drawCity, drawTech, resQueue, clearResDrag } from './actions.js';
 import { renderSpace, ascendLab, terraformLab } from './space.js';
 import { renderFortress, buildFortress, drawMechLab, clearMechDrag, drawHellObservations } from './portal.js';
+import { renderEdenic } from './edenic.js';
 import { drawShipYard, clearShipDrag, renderTauCeti } from './truepath.js';
 import { arpa, clearGeneticsDrag } from './arpa.js';
 import { playFabStats } from './playfab.js';
@@ -149,6 +150,9 @@ export function mainVue(){
                 global.settings.queuestyle = style;
                 updateQueueStyle();
             },
+            setQueueResize(mode) {
+                global.settings.q_resize = mode;
+            },
             icon(icon){
                 global.settings.icon = icon;
                 save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
@@ -205,6 +209,8 @@ export function mainVue(){
                         return loc(`metric`);
                     case 'sci':
                         return loc(`scientific`);
+                    case 'eng':
+                        return loc(`engineering`);
                     case 'sln':
                         return loc(`sln`);
                 }
@@ -283,12 +289,13 @@ function tabLabel(lbl){
 }
 
 function updateQueueStyle(){
+    const buildingQueue = $('#buildQueue');
     ['standardqueuestyle', 'listqueuestyle', 'bulletlistqueuestyle', 'numberedlistqueuestyle']
-        .map(qstyle => {
+        .forEach(qstyle => {
             if (global.settings.queuestyle === qstyle) {
-                $('html').addClass(qstyle);
+                buildingQueue.addClass(qstyle);
             } else {
-                $('html').removeClass(qstyle);
+                buildingQueue.removeClass(qstyle);
             }
         });
 }
@@ -383,6 +390,12 @@ export function loadTab(tab){
                             <span aria-hidden="true">{{ 'tab_tauceti' | label }}</span>
                         </template>
                     </b-tab-item>
+                    <b-tab-item id="eden" :visible="s.showEden">
+                        <template slot="header">
+                            <h2 class="is-sr-only">{{ 'tab_eden' | label }}</h2>
+                            <span aria-hidden="true">{{ 'tab_eden' | label }}</span>
+                        </template>
+                    </b-tab-item>
                 </b-tabs>`);
                 vBind({
                     el: `#mTabCivil`,
@@ -399,6 +412,7 @@ export function loadTab(tab){
                                 clearElement($(`#portal`));
                                 clearElement($(`#outerSol`));
                                 clearElement($(`#tauCeti`));
+                                clearElement($(`#eden`));
                                 switch (tab){
                                     case 0:
                                         drawCity();
@@ -414,6 +428,9 @@ export function loadTab(tab){
                                         break;
                                     case 6:
                                         renderTauCeti();
+                                        break;
+                                    case 7:
+                                        renderEdenic();
                                         break;
                                 }
                             }
@@ -431,11 +448,16 @@ export function loadTab(tab){
                     renderSpace();
                     renderFortress();
                     renderTauCeti();
+                    renderEdenic();
                 }
                 if (global.race['noexport']){
                     if (global.race['noexport'] === 'Race'){
                         clearElement($(`#city`));
                         ascendLab();
+                    }
+                    else if (global.race['noexport'] === 'Hybrid'){
+                        clearElement($(`#city`));
+                        ascendLab(true);
                     }
                     else if (global.race['noexport'] === 'Planet'){
                         clearElement($(`#city`));
@@ -493,6 +515,12 @@ export function loadTab(tab){
                             <span aria-hidden="true">{{ 'tab_psychic' | label }}</span>
                         </template>
                     </b-tab-item>
+                    <b-tab-item id="supernatural" class="supernaturalTab" :visible="s.showWish">
+                        <template slot="header">
+                            <h2 class="is-sr-only">{{ 'tab_supernatural' | label }}</h2>
+                            <span aria-hidden="true">{{ 'tab_supernatural' | label }}</span>
+                        </template>
+                    </b-tab-item>
                 </b-tabs>`);
                 vBind({
                     el: `#mTabCivic`,
@@ -513,6 +541,7 @@ export function loadTab(tab){
                                 clearElement($(`#mechLab`));
                                 clearElement($(`#dwarfShipYard`));
                                 clearElement($(`#psychicPowers`));
+                                clearElement($(`#supernatural`));
                                 switch (tab){
                                     case 0:
                                         {
@@ -562,6 +591,11 @@ export function loadTab(tab){
                                             renderPsychicPowers();
                                         }
                                         break;
+                                    case 7:
+                                        if (((global.race['wish'] && global.tech['wish']) || global.race['ocular_power']) && global.race.species !== 'protoplasm'){
+                                            renderSupernatural();
+                                        }
+                                        break;
                                 }
                             }
                             return tab;
@@ -594,6 +628,9 @@ export function loadTab(tab){
                     }
                     if (global.race['psychic'] && global.tech['psychic']){
                         renderPsychicPowers();
+                    }
+                    if ((global.race['wish'] && global.tech['wish']) || global.race['ocular_power']){
+                        renderSupernatural();
                     }
                 }
                 if (global.race['shapeshifter']){
@@ -888,7 +925,7 @@ export function index(){
             <div class="power"><span id="powerStatus" class="has-text-warning" v-show="city.powered"><span>MW</span> <span id="powerMeter" class="meter">{{ city.power | replicate | approx }}</span></span></div>
         </div>
         <div id="sideQueue">
-            <div id="buildQueue" class="bldQueue has-text-info" v-show="display"></div>
+            <div id="buildQueue" class="bldQueue standardqueuestyle has-text-info" v-show="display"></div>
             <div id="msgQueue" class="msgQueue vscroll has-text-info" aria-live="polite">
                 <div id="msgQueueHeader">
                     <h2 class="has-text-success">${loc('message_log')}</h2>
@@ -934,7 +971,7 @@ export function index(){
                     let queue = $(`#msgQueueLog`);
                     clearElement(queue);
                     message_logs[filter].forEach(function (msg){
-                        queue.append($('<p class="has-text-'+msg.color+'">'+msg.msg+'</p>'));
+                        queue.append($('<p class="has-text-'+msg.color+'"></p>').text(msg.msg));
                     });
                 }
             },
@@ -1045,7 +1082,7 @@ export function index(){
                                                 let queue = $(`#msgQueueLog`);
                                                 clearElement(queue);
                                                 message_logs[filt].forEach(function (msg){
-                                                    queue.append($('<p class="has-text-'+msg.color+'">'+msg.msg+'</p>'));
+                                                    queue.append($('<p class="has-text-'+msg.color+'"></p>').text(msg.msg));
                                                 });
                                             }
                                         });
@@ -1193,7 +1230,9 @@ export function index(){
         {i: 'turtle',       f: 'finish_line',       r: 2 },
         {i: 'floppy',       f: 'digital_ascension', r: 2 },
         {i: 'slime',        f: 'slime_lord',        r: 2 },
+        {i: 'sludge',       f: 'grand_death_tour',  r: 2 },
         {i: 'lightning',    f: 'annihilation',      r: 2 },
+        {i: 'trophy',       f: 'wish',              r: 2 },
         {i: 'heart',        f: 'valentine',         r: 1 },
         {i: 'clover',       f: 'leprechaun',        r: 1 },
         {i: 'bunny',        f: 'easter',            r: 1 },
@@ -1204,7 +1243,8 @@ export function index(){
         {i: 'ghost',        f: 'halloween',         r: 1 },
         {i: 'candy',        f: 'trickortreat',      r: 1 },
         {i: 'turkey',       f: 'thanksgiving',      r: 1 },
-        {i: 'present',      f: 'xmas',              r: 1 }
+        {i: 'meat',         f: 'immortal',          r: 1 },
+        {i: 'present',      f: 'xmas',              r: 1 },
     ];
 
     let irank = alevel();
@@ -1274,6 +1314,7 @@ export function index(){
                 </button>
                 <b-dropdown-item v-on:click="numNotation('si')">{{ 'metric' | label }}</b-dropdown-item>
                 <b-dropdown-item v-on:click="numNotation('sci')">{{ 'scientific' | label }}</b-dropdown-item>
+                <b-dropdown-item v-on:click="numNotation('eng')">{{ 'engineering' | label }}</b-dropdown-item>
                 <b-dropdown-item v-on:click="numNotation('sln')">{{ 'sln' | label }}</b-dropdown-item>
                 ${hideTreat}
             </b-dropdown>
@@ -1286,18 +1327,6 @@ export function index(){
                 </button>
                 <b-dropdown-item v-on:click="icon('star')">${drawIcon('star',16,irank)} {{ 'star' | label }}</b-dropdown-item>
                 ${iconlist}
-            </b-dropdown>
-
-            <span>{{ 'queuestyle' | label }} </span>
-            <b-dropdown hoverable>
-                <button class="button is-primary" slot="trigger">
-                    <span>{{ s.queuestyle | label }}</span>
-                    <i class="fas fa-sort-down"></i>
-                </button>
-                <b-dropdown-item v-on:click="setQueueStyle('standardqueuestyle')">{{ 'standardqueuestyle' | label }}</b-dropdown-item>
-                <b-dropdown-item v-on:click="setQueueStyle('listqueuestyle')">{{ 'listqueuestyle' | label }}</b-dropdown-item>
-                <b-dropdown-item v-on:click="setQueueStyle('bulletlistqueuestyle')">{{ 'bulletlistqueuestyle' | label }}</b-dropdown-item>
-                <b-dropdown-item v-on:click="setQueueStyle('numberedlistqueuestyle')">{{ 'numberedlistqueuestyle' | label }}</b-dropdown-item>
             </b-dropdown>
         </div>
         <div id="localization" class="localization">
@@ -1320,6 +1349,20 @@ export function index(){
                 <b-dropdown-item v-on:click="font('large_log')">{{ 'large_log' | label }}</b-dropdown-item>
                 <b-dropdown-item v-on:click="font('large_all')">{{ 'large_all' | label }}</b-dropdown-item>
             </b-dropdown>
+        </div>
+
+        <div class="queue">
+            <span>{{ 'queuestyle' | label }} </span>
+            <b-dropdown hoverable>
+                <button class="button is-primary" slot="trigger">
+                    <span>{{ s.queuestyle | label }}</span>
+                    <i class="fas fa-sort-down"></i>
+                </button>
+                <b-dropdown-item v-on:click="setQueueStyle('standardqueuestyle')">{{ 'standardqueuestyle' | label }}</b-dropdown-item>
+                <b-dropdown-item v-on:click="setQueueStyle('listqueuestyle')">{{ 'listqueuestyle' | label }}</b-dropdown-item>
+                <b-dropdown-item v-on:click="setQueueStyle('bulletlistqueuestyle')">{{ 'bulletlistqueuestyle' | label }}</b-dropdown-item>
+                <b-dropdown-item v-on:click="setQueueStyle('numberedlistqueuestyle')">{{ 'numberedlistqueuestyle' | label }}</b-dropdown-item>
+            </b-dropdown>
 
             <span class="settings15" aria-label="${loc('settings15')}">{{ 'q_merge' | label }} </span>
             <b-dropdown hoverable>
@@ -1331,7 +1374,20 @@ export function index(){
                 <b-dropdown-item v-on:click="q_merge('merge_nearby')">{{ 'merge_nearby' | label }}</b-dropdown-item>
                 <b-dropdown-item v-on:click="q_merge('merge_all')">{{ 'merge_all' | label }}</b-dropdown-item>
             </b-dropdown>
+
+            <span>{{ 'q_resize' | label }} </span>
+            <b-dropdown hoverable>
+                <button class="button is-primary" slot="trigger">
+                    <span>{{ 'q_resize_' + s.q_resize | label }}</span>
+                    <i class="fas fa-sort-down"></i>
+                </button>
+                <b-dropdown-item v-on:click="setQueueResize('auto')">{{ 'q_resize_auto' | label }}</b-dropdown-item>
+                <b-dropdown-item v-on:click="setQueueResize('grow')">{{ 'q_resize_grow' | label }}</b-dropdown-item>
+                <b-dropdown-item v-on:click="setQueueResize('shrink')">{{ 'q_resize_shrink' | label }}</b-dropdown-item>
+                <b-dropdown-item v-on:click="setQueueResize('manual')">{{ 'q_resize_manual' | label }}</b-dropdown-item>
+            </b-dropdown>
         </div>
+
         <b-switch class="setting" v-model="s.pause" @input="unpause"><span class="settings12" aria-label="${loc('settings12')}">{{ 'pause' | label }}</span></b-switch>
         <b-switch class="setting" v-model="s.mKeys"><span class="settings1" aria-label="${loc('settings1')}">{{ 'm_keys' | label }}</span></b-switch>
         <b-switch class="setting" v-model="s.cLabels"><span class="settings5" aria-label="${loc('settings5')}">{{ 'c_cat' | label }}</span></b-switch>
@@ -1363,7 +1419,7 @@ export function index(){
         </div>
         <div class="stringPack setting">
             <button id="stringPack" class="button" @click="importStringFile">{{ 'load_string_pack' | label }}</button>
-            <input type="file" class="fileImport" id="stringPackFile" accept=".txt">
+            <input type="file" class="fileImport" id="stringPackFile" accept="text/plain, application/json">
             <button class="button right" @click="clearStringFile">{{ 'clear_string_pack' | label }}</button>
         </div>
         <div class="stringPack setting">

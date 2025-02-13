@@ -6,8 +6,9 @@ import { races, traits, fathomCheck } from './races.js';
 import { atomic_mass } from './resources.js';
 import { checkRequirements, checkSpaceRequirements, convertSpaceSector, planetName } from './space.js';
 import { fortressTech } from './portal.js';
+import { edenicTech } from './edenic.js';
 import { checkPathRequirements } from './truepath.js';
-import { production } from './prod.js';
+import { highPopAdjust, production } from './prod.js';
 
 export function loadIndustry(industry,parent,bind){
     switch (industry){
@@ -44,6 +45,9 @@ export function loadIndustry(industry,parent,bind){
         case 'replicator':
             loadReplicator(parent,bind);
             break;
+        case 'mech_station':
+            loadMechStation(parent,bind);
+            break;
     }
 }
 
@@ -53,7 +57,7 @@ export function defineIndustry(){
     }
     clearElement($('#industry'));
 
-    if (global.city['smelter'] && (global.city.smelter.count > 0 || global.race['cataclysm'] || global.race['orbit_decayed'] || global.tech['isolation'])){
+    if (smelterUnlocked()){
         var smelter = $(`<div id="iSmelter" class="industry"><h2 class="header has-text-advanced">${loc('city_smelter')}</h2></div>`);
         $(`#industry`).append(smelter);
         loadIndustry('smelter',smelter,'#iSmelter');
@@ -187,7 +191,7 @@ function loadSmelter(parent,bind){
     }
 
     if (global.race['forge']){
-        let oil = $(`<span :aria-label="buildLabel('oil') + ariaCount('Oil')" class="current oil infoOnly">${loc('trait_forge_name')} {{ s.Oil }}</span>`);
+        let oil = $(`<span :aria-label="buildLabel('oil') + ariaCount('Oil')" class="current oil infoOnly">${loc('trait_forge_name')} <span v-html="$options.filters.altspook(s.Oil)"></span></span>`);
         fuelTypes.append(oil);
     }
     else if (global.resource.Oil.display){
@@ -419,7 +423,7 @@ function loadSmelter(parent,bind){
                 return v;
             },
             altspook(v){
-                if (bind && global.race['forge'] && global.city.smelter.Steel === 6){
+                if (bind && global.race['forge'] && global.city.smelter.Steel === 6 && global.city.smelter.Iron === 6){
                     let trick = trickOrTreat(3,12,true);
                     if (trick.length > 0){
                         return trick;
@@ -517,6 +521,19 @@ function loadSmelter(parent,bind){
                 attach: '#main',
             });
         });
+    }
+}
+
+export function smelterUnlocked(){
+    return global.city['smelter'] && (global.city.smelter.count > 0 || global.race['cataclysm'] || global.race['orbit_decayed'] || global.tech['isolation']);
+}
+
+export function addSmelter(num=1, product="Iron", fuel="Oil"){
+    global.city.smelter.cap += num;
+    global.city.smelter[product] += num; // ["Iron", "Steel", "Iridium"]
+    global.city.smelter[fuel] += num; // ["Wood", "Coal", "Oil", "Star", "Inferno"]
+    if (fuel === 'star') {
+        global.city.smelter.StarCap += num;
     }
 }
 
@@ -678,7 +695,7 @@ function loadFactory(parent,bind){
         let assembly = global.tech['factory'] ? true : false;
         switch(type){
             case 'Lux':{
-                let demand = +(global.resource[global.race.species].amount * (assembly ? f_rate.Lux.demand[global.tech['factory']] : f_rate.Lux.demand[0]));
+                let demand = +(highPopAdjust(global.resource[global.race.species].amount) * (assembly ? f_rate.Lux.demand[global.tech['factory']] : f_rate.Lux.demand[0]));
                 demand = luxGoodPrice(demand).toFixed(2);
                 let fur = assembly ? f_rate.Lux.fur[global.tech['factory']] : f_rate.Lux.fur[0];
                 return loc('modal_factory_lux_label',[fur,global.resource.Furs.name,demand]);
@@ -750,6 +767,9 @@ export function luxGoodPrice(demand){
     }
     if (global.tech['isolation']){
         demand *= 1 + ((support_on['colony'] || 0) * 0.5);
+    }
+    if(global.stats.achieve['endless_hunger'] && global.stats.achieve['endless_hunger'].l >= 4 && global.city.banquet && global.city.banquet.count >= 4 && global.city.banquet.strength){
+        demand *= 1 + (global.city.banquet.strength ** 0.75) / 100;
     }
     demand *= production('psychic_cash');
     return demand;
@@ -1281,6 +1301,50 @@ function loadQuarry(parent,bind){
     });
 }
 
+function loadMechStation(parent,bind){
+    let mech = $(`<div class="factory"><span>${loc(`eden_mech_station_control`)}</span></div>`);
+    parent.append(mech);
+    let mechPatrol = $(`<span class="current">{{ mode | patrolMode }}</span>`);
+    let mechDown = $(`<span class="sub" @click="lower()" role="button" aria-label="Decrease Patrol Aggression">&laquo;</span>`);
+    let mechUp = $(`<span class="add" @click="higher()" role="button" aria-label="Increase Patrol Aggression">&raquo;</span>`);
+    mech.append(mechDown);
+    mech.append(mechPatrol);
+    mech.append(mechUp);
+
+    let stats = $(`<div class="flexAround"></div>`);
+    stats.append($(`<span v-html="$options.filters.patrol(mechs)"></span>`));
+    stats.append($(`<span v-html="$options.filters.effect(effect)"></span>`));
+    parent.append(stats);
+
+    vBind({
+        el: bind ? bind : '#specialModal',
+        data: global.eden['mech_station'],
+        methods: {
+            lower: function(){
+                if (global.eden.mech_station.mode > 0){
+                    global.eden.mech_station.mode--;
+                }
+            },
+            higher: function(){
+                if (global.eden.mech_station.mode < 5){
+                    global.eden.mech_station.mode++
+                }
+            },
+        },
+        filters: {
+            patrolMode(v){
+                return loc(`eden_mech_station_patrol${v}`);
+            },
+            patrol(v){
+                return loc(`eden_mech_station_mechs`,[v]);
+            },
+            effect(v){
+                return loc(`eden_mech_station_effective`,[v]);
+            }
+        }
+    });
+}
+
 function loadTMine(parent,bind){
     parent.append($(`<div>${loc('modal_quarry_ratio',[global.resource.Adamantite.name])}</div>`));
 
@@ -1395,10 +1459,12 @@ function loadReplicator(parent,bind){
         if (bind){
         let values = ``;
             Object.keys(atomic_mass).forEach(function(res){
-                values += `<b-dropdown-item aria-role="listitem" v-on:click="setVal('${res}')" data-val="${res}" v-show="avail('${res}')">${global.resource[res].name}</b-dropdown-item>`;
+                if (res !== 'Asphodel_Powder' && res !== 'Elysanite'){
+                    values += `<b-dropdown-item aria-role="listitem" v-on:click="setVal('${res}')" data-val="${res}" v-show="avail('${res}')">${global.resource[res].name}</b-dropdown-item>`;
+                }
             });
 
-            content.append(`<div><b-dropdown :triggers="['hover']" aria-role="list" :scrollable="true" :max-height="200" class="dropList">
+            content.append(`<div><b-dropdown :triggers="['hover', 'click']" aria-role="list" :scrollable="true" :max-height="200" class="dropList">
                 <button class="button is-info" slot="trigger">
                     <span>{{ res | resName }}</span>
                 </button>${values}
@@ -1407,7 +1473,7 @@ function loadReplicator(parent,bind){
         else {
             let scrollMenu = ``;
             Object.keys(atomic_mass).forEach(function(res){
-                if (global.resource[res].display){
+                if (global.resource[res].display && res !== 'Asphodel_Powder' && res !== 'Elysanite'){
                     scrollMenu += `<b-radio-button v-model="res" native-value="${res}">${global.resource[res].name}</b-radio-button>`;
                 }
             });
@@ -1449,7 +1515,7 @@ function loadReplicator(parent,bind){
                     }
                 },
                 avail(r){
-                    return global.resource[r].display;
+                    return global.resource[r].display && !(global.race['fasting'] && r === 'Food');
                 },
                 aria(){
                     return global.race.replicator.pow + 'MW';
@@ -1460,7 +1526,7 @@ function loadReplicator(parent,bind){
                     return global.resource[r].name;
                 },
                 result(r){
-                    return loc(`tau_replicator`,[replicator(r,global.race.replicator.pow).toFixed(3),global.resource[r].name]);
+                    return loc(`tau_replicator`,[replicator(r,global.race.replicator.pow).toFixed(2),global.resource[r].name]);
                 }
             }
         });
@@ -1482,7 +1548,14 @@ export function replicator(res,pow){
     }
     else {
         let qLevel = quantum_level || 1;
-        return 12.5 * qLevel / atomic_mass[res] * (pow ** 0.75);
+        let mass = res === 'Infernite' || res === 'Elerium' ? atomic_mass[res] * 4 : atomic_mass[res];
+        if (pow > 5000){
+            pow = ((pow - 5000) ** 0.9) + 5000;
+        }
+        if (qLevel > 40){
+            qLevel = ((qLevel - 40) ** 0.75) + 40;
+        }
+        return 12.5 * qLevel / mass * (pow ** 0.75);
     }
 }
 
@@ -1531,6 +1604,9 @@ export function gridEnabled(c_action,region,p0,p1){
             break;
         case 'tauceti':
             isOk = checkPathRequirements(region,p0,p1);
+            break;
+        case 'eden':
+            isOk = checkRequirements(edenicTech(),p0,p1);
             break;
         default:
             isOk = p0 === 'spc_moon' && global.race['orbit_decayed'] ? false : checkSpaceRequirements(region,p0,p1);
@@ -1717,7 +1793,7 @@ export function gridDefs(){
         nebula: { l: global.support.nebula, n: loc(`interstellar_nebula_name`), s: global.settings.space.nebula, r: 'interstellar', rs: 'nexus'  },
         gateway: { l: global.support.gateway, n: loc(`galaxy_gateway`), s: global.settings.space.gateway, r: 'galaxy', rs: 'starbase'  },
         alien2: { l: global.support.alien2, n: loc('galaxy_alien',[races[global.galaxy.hasOwnProperty('alien2') ? global.galaxy.alien2.id : global.race.species].name]), s: global.settings.space.alien2, r: 'galaxy', rs: 'foothold'  },
-        lake: { l: global.support.lake, n: loc(`portal_lake_name`), s: global.settings.portal.lake, r: 'portal', rs: 'harbour'  },
+        lake: { l: global.support.lake, n: loc(`portal_lake_name`), s: global.settings.portal.lake, r: 'portal', rs: 'harbor'  },
         spire: { l: global.support.spire, n: loc(`portal_spire_name`), s: global.settings.portal.spire, r: 'portal', rs: 'purifier'  },
         titan: { l: global.support.titan, n: planetName().titan, s: global.settings.space.titan, r: 'space', rs: 'electrolysis'  },
         enceladus: { l: global.support.enceladus, n: planetName().enceladus, s: global.settings.space.enceladus, r: 'space', rs: 'titan_spaceport'  },
@@ -1725,6 +1801,7 @@ export function gridDefs(){
         tau_home: { l: global.support.tau_home, n: loc(`tau_planet`,[races[global.race.species].home]), s: global.settings.tau.home, r: 'tauceti', rs: 'orbital_station'  },
         tau_red: { l: global.support.tau_red, n: loc(`tau_planet`,[planetName().red]), s: global.settings.tau.red, r: 'tauceti', rs: 'orbital_platform'  },
         tau_roid: { l: global.support.tau_roid, n: loc(`tau_roid_title`), s: global.settings.tau.roid, r: 'tauceti', rs: 'patrol_ship'  },
+        asphodel: { l: global.support.asphodel, n: loc(`eden_asphodel_name`), s: global.settings.eden.asphodel, r: 'eden', rs: 'encampment' },
     };
 }
 

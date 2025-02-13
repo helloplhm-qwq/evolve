@@ -1,7 +1,174 @@
 import {} from './../vars.js';
 import { clearElement } from './../functions.js';
 
-const changeList = [
+export const changeList = [
+    {
+        version: `1.4.1`,
+        date: `12/1/2024`,
+        changes: [
+            `Racconar now use the special Forager trait in place of Herbivore and Carnivore.`,
+            `Genetics Lab now shows rank adjustments with Empowered.`,
+            `Fixed wiki display of the Grand Death Tour progress.`,
+            `Normalized Mimic and Imitate ranks.`,
+            `Fliers will no longer be offered a new cement production method in Edenic realm.`,
+            `Fixed issues with powered down Stargate.`,
+            `Fixed various minor bugs.`
+        ]
+    },
+    {
+        version: `1.4.0`,
+        date: `11/28/2024`,
+        changes: [
+            `Push past the Spire and invade the Edenic Realms.`,
+            `Added new planet trait: Kamikaze.`,
+            `Added new CRISPR upgrade Bureaucratic Efficiency.`,
+            `The Grand Death Tour is available after completing Apotheosis.`,
+            `Custom Race lab now allows player to set a desired fanaticism trait.`,
+            `You can no longer have more than 10 negative traits on a custom.`,
+            `Invalid legacy customs will take a penalty called Overtapped in future game versions.`,
+            `Truepath Ships can now be queued for construction.`,
+            `Exotic Materials are now harder to replicate.`,
+            `Progenitor races are now shown on stats page.`,
+            `Symposium is now affected by piracy.`,
+            `Gate Turrets will now kill demons when the Soul Forge is turned off.`,
+            `Stellar Engine now has diminishing returns when pushed to extreme levels.`,
+            `The number of spies available when starting a spy op now affects mission time.`,
+            `Fluidized Bed Reactor no longer incorrectly applies to Nano Tubes.`,
+            `Shrines now cycle their effect with moon phase if purchased during a full, new, or quarter moon.`,
+            `Slitheryn Slow Digestion replaced with Astrologer.`,
+            `Slow trait value changed from -5 to -6.`
+        ]
+    },
+    {
+        version: `1.3.17`,
+        revision: `c`,
+        date: `11/1/2024`,
+        changes: [
+            `Non-Evil Wendigo can now Trick or Treat!`,
+        ]
+    },
+    {
+        version: `1.3.17`,
+        revision: `b`,
+        date: `10/29/2024`,
+        changes: [
+            `Fixed Ghost #3 with Forge Trait.`,
+            `Fixed Emocorn gloomy trait.`
+        ]
+    },
+    {
+        version: `1.3.17`,
+        revision: `a`,
+        date: `10/27/2024`,
+        changes: [
+            `Fixed Trick or Treat! Feat tracker.`
+        ]
+    },
+    {
+        version: `1.3.17`,
+        date: `10/13/2024`,
+        changes: [
+            `Cruisers now grant the correct number of soldiers in Fasting scenario.`,
+            `Mass Ejector will now show a timer until destabilization if T3 previously completed.`,
+            `Fixed Coal income in Cataclysm.`,
+            `Adjusted High Pop growth rates.`,
+            `Craftsmen have been renamed to Crafters.`,
+            `Fixed some issues with the Wiki.`,
+            `Fixed display error with Cultural Center.`
+        ]
+    },
+    {
+        version: `1.3.16`,
+        revision: `a`,
+        date: `9/30/2024`,
+        changes: [
+            `Fixed an issue with with Gravity Well challenge and having too many Railways.`
+        ]
+    },
+    {
+        version: `1.3.16`,
+        revision: `a`,
+        date: `9/30/2024`,
+        changes: [
+            `Fixed an issue with with Gravity Well challenge and having too many Railways.`
+        ]
+    },
+    {
+        version: `1.3.16`,
+        date: `9/29/2024`,
+        changes: [
+            `Pickaxes once again affect Coal Mines.`,
+            `Changed Scientific Notation to Engineering Notation.`,
+            `Added Scientific Notation option.`
+        ]
+    },
+    {
+        version: `1.3.15`,
+        revision: `a`,
+        date: `9/21/2024`,
+        changes: [
+            `Fixed Secret to Immortality feat not being awarded.`
+        ]
+    },
+    {
+        version: `1.3.15`,
+        date: `9/19/2024`,
+        changes: [
+            `Fasting scenario Demonic Infusion goal updated with new tastier experience.`,
+            `Starvation risk tooltips added for Fasting scenario.`,
+            `Mastery listed under stats tab now displays unmodified value.`,
+            `Dark Bomb will no longer appear as an option after the demon lord is defeated.`,
+        ]
+    },
+    {
+        version: `1.3.14`,
+        revision: `a`,
+        date: `9/2/2024`,
+        changes: [
+            `Fixed incorrect scientist label.`
+        ]
+    },
+    {
+        version: `1.3.14`,
+        date: `9/2/2024`,
+        changes: [
+            `Fixed various bugs with Fasting scenario.`,
+            `Difficulty tweaks to Fasting scenario.`,
+            `Added feat Icon for Fasting.`,
+            `Ships in route to the Dwarf planet now check their fuel consumption.`,
+            `Manual crafting is no longer affected by High Population trait.`,
+            `Misc bug fixes.`
+        ]
+    },
+    {
+        version: `1.3.13`,
+        revision: `b`,
+        date: `8/6/2024`,
+        changes: [
+            `Fixed issue with starting Cataclysm Scenerio.`,
+            `Fixed some issues with Fasting Scenario.`,
+            `Fixed an issue with Replicator scheduler and supplies.`
+        ]
+    },
+    {
+        version: `1.3.13`,
+        revision: `a`,
+        date: `8/6/2024`,
+        changes: [
+            `Fix a bug that prevented crafting in Cataclysm and Lone Survivor modes.`
+        ]
+    },
+    {
+        version: `1.3.13`,
+        date: `8/6/2024`,
+        changes: [
+            `New Scenario by CondoSlime: Fasting.`,
+            `More queue config options.`,
+            `Wiki Search feature by sm3232`,
+            `Language Updates.`,
+            `Random bug fixes.`
+        ]
+    },
     {
         version: `1.3.12`,
         date: `3/30/2024`,
@@ -3269,7 +3436,7 @@ export function changeLog(){
         content.append(change);
 
         let revision = changeList[i].hasOwnProperty('revision') ? changeList[i].revision : '';
-        change.append(`<div class="type"><h2 class="has-text-warning">v${changeList[i].version}${revision}</h2><span class="has-text-caution">${changeList[i].date}</span></div>`);
+        change.append(`<div class="type"><h2 class="has-text-warning" id="${changeList[i].version.replaceAll('.','_')}">v${changeList[i].version}${revision}</h2><span class="has-text-caution">${changeList[i].date}</span></div>`);
 
         for (let j=0; j<changeList[i].changes.length; j++){
             change.append(`<div class="desc">${changeList[i].changes[j]}</div>`);

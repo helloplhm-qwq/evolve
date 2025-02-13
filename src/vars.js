@@ -9,6 +9,7 @@ export var global = {
     space: {},
     interstellar: {},
     portal: {},
+    eden: {},
     tauceti: {},
     civic: {},
     race: {},
@@ -678,6 +679,7 @@ if (convertVersion(global['version']) < 100023){
             delete global.tech['axe']; delete global.tech['reclaimer']; delete global.tech['saw'];
             global.civic.lumberjack.display = false;
             global.civic.lumberjack.workers = 0;
+            global.civic.lumberjack.assigned = 0;
             if (global.civic.d_job === 'lumberjack') { global.civic.d_job = 'unemployed'; }
             if (global.race['casting']){
                 global.race.casting.total -= global.race.casting.lumberjack;
@@ -1187,14 +1189,52 @@ if (convertVersion(global['version']) < 103011){
     }
 }
 
-global['version'] = '1.3.12';
+if (convertVersion(global['version']) < 103014){
+    if (global.race['cataclysm'] && !global.race['start_cataclysm']){
+        global.civic.craftsman.display = true;
+    }
+    if (global.race['lone_survivor'] && ((global.tauceti['tau_factory'] && global.tauceti.tau_factory.count > 0) || (global.tauceti['womling_station'] && global.tauceti.womling_station.count > 0))){
+        global.civic.craftsman.display = true;
+    }
+}
+
+if (convertVersion(global['version']) <= 103015){
+    if (global.portal.hasOwnProperty('harbour')){
+        global.portal['harbor'] = global.portal.harbour;
+        delete global.portal.harbour;
+    }
+}
+
+if (convertVersion(global['version']) <= 103017){
+    if (global.race['broody']){
+        global.race['gloomy'] = global.race['broody'];
+        delete global.race['broody'];
+    }
+}
+
+if (convertVersion(global['version']) <= 104000){
+    if (global.city.hasOwnProperty('shrine') && !global.city.shrine.hasOwnProperty('cycle')){
+        global.city.shrine['cycle'] = 0;
+    }
+}
+
+if (convertVersion(global['version']) < 104001){
+    if(global.tech['elysium'] && global.tech.elysium >= 18){
+        global.tech.elysium--;
+        if(global.tech.cement && !global.race['flier']){
+            global.tech.cement = 8;
+        }
+    }
+}
+
+global['version'] = '1.4.1';
 delete global['revision'];
 delete global['beta'];
 
 if (!global.hasOwnProperty('prestige')){
     global.prestige = {};
 }
-['Plasmid','AntiPlasmid','Phage','Dark','Harmony','AICore','Artifact','Blood_Stone'].forEach(function (res){
+['Plasmid','AntiPlasmid','Phage','Dark','Harmony','AICore','Artifact','Blood_Stone','Supercoiled'].forEach(function (res){
     if (!global.prestige.hasOwnProperty(res)){
         global.prestige[res] = { count: 0 };
     }
@@ -1210,7 +1250,7 @@ if (!global.hasOwnProperty('support')){
 
 [
     'moon','red','belt','alpha','nebula','gateway','alien2','lake','spire',
-    'titan','enceladus','eris','tau_home','tau_red','tau_roid'
+    'titan','enceladus','eris','tau_home','tau_red','tau_roid','asphodel'
 ].forEach(function(s){
     if (!global.support.hasOwnProperty(s)){
         global.support[s] = [];
@@ -1362,6 +1402,10 @@ if (!global['galaxy']){
     global['galaxy'] = {};
 }
 
+if (!global['eden']){
+    global['eden'] = {};
+}
+
 if (global.interstellar['mass_ejector'] && !global.interstellar.mass_ejector['Bolognium']){
     global.interstellar.mass_ejector['Bolognium'] = 0;
 }
@@ -1453,9 +1497,9 @@ export function setupStats(){
     [
         'reset','plasmid','antiplasmid','universes','phage','starved','tstarved','died','tdied',
         'sac','tsac','know','tknow','portals','dkills','attacks','cfood','tfood','cstone','tstone',
-        'clumber','tlumber','mad','bioseed','cataclysm','blackhole','ascend','descend','terraform',
-        'aiappoc','matrix','retire','eden','geck','dark','harmony','blood','cores','artifact',
-        'cattle','tcattle','murders','tmurders','psykill','tpsykill'
+        'clumber','tlumber','mad','bioseed','cataclysm','blackhole','ascend','descend','apotheosis',
+        'terraform','aiappoc','matrix','retire','eden','geck','dark','harmony','blood','cores','artifact',
+        'supercoiled','cattle','tcattle','murders','tmurders','psykill','tpsykill','pdebt','uDead'
     ].forEach(function(k){
         if (!global.stats.hasOwnProperty(k)){
             global.stats[k] = 0;
@@ -1491,6 +1535,28 @@ export function setupStats(){
             b4: { l: false, h: false, a: false, e: false, m: false, mg: false }, 
             b5: { l: false, h: false, a: false, e: false, m: false, mg: false }
         };
+    }
+    if (!global.stats.hasOwnProperty('endless_hunger')){
+        global.stats['endless_hunger'] = {
+            b1: { l: false, h: false, a: false, e: false, m: false, mg: false }, 
+            b2: { l: false, h: false, a: false, e: false, m: false, mg: false }, 
+            b3: { l: false, h: false, a: false, e: false, m: false, mg: false }, 
+            b4: { l: false, h: false, a: false, e: false, m: false, mg: false }, 
+            b5: { l: false, h: false, a: false, e: false, m: false, mg: false }
+        };
+    }
+    if (!global.stats.hasOwnProperty('death_tour')){
+        global.stats['death_tour'] = {
+            ct: { l: 0, h: 0, a: 0, e: 0, m: 0, mg: 0 }, 
+            bh: { l: 0, h: 0, a: 0, e: 0, m: 0, mg: 0 }, 
+            di: { l: 0, h: 0, a: 0, e: 0, m: 0, mg: 0 }, 
+            ai: { l: 0, h: 0, a: 0, e: 0, m: 0, mg: 0 }, 
+            vc: { l: 0, h: 0, a: 0, e: 0, m: 0, mg: 0 },
+            md: { l: 0, h: 0, a: 0, e: 0, m: 0, mg: 0 }
+        };
+    }
+    if (global.stats['death_tour'] && !global.stats.death_tour.hasOwnProperty('md')){
+        global.stats.death_tour['md'] = { l: 0, h: 0, a: 0, e: 0, m: 0, mg: 0 };
     }
 }
 
@@ -1686,6 +1752,10 @@ if (!global.settings['queuestyle']){
     global.settings['queuestyle'] = 'standardqueuestyle';
 }
 
+if (!global.settings['q_resize']){
+    global.settings.q_resize = 'auto';
+}
+
 $('html').addClass(global.settings.theme);
 $('html').addClass(global.settings.queuestyle);
 
@@ -1719,42 +1789,14 @@ if (!global.city['hot']){
     global.city['hot'] = 0;
 }
 
-if (!global.city.morale['unemployed']){
-    global.city.morale['unemployed'] = 0;
-}
-if (!global.city.morale['leadership']){
-    global.city.morale['leadership'] = 0;
-}
-if (!global.city.morale['warmonger']){
-    global.city.morale['warmonger'] = 0;
-}
-if (!global.city.morale['rev']){
-    global.city.morale['rev'] = 0;
-}
-if (!global.city.morale['tax']){
-    global.city.morale['tax'] = 0;
-}
-if (!global.city.morale['shrine']){
-    global.city.morale['shrine'] = 0;
-}
-if (!global.city.morale['blood_thirst']){
-    global.city.morale['blood_thirst'] = 0;
-}
-if (!global.city.morale['broadcast']){
-    global.city.morale['broadcast'] = 0;
-}
-if (!global.city.morale['vr']){
-    global.city.morale['vr'] = 0;
-}
-if (!global.city.morale['zoo']){
-    global.city.morale['zoo'] = 0;
-}
-if (!global.city.morale['cap']){
-    global.city.morale['cap'] = 0;
-}
-if (!global.city.morale['potential']){
-    global.city.morale['potential'] = 0;
-}
+[
+    'unemployed','leadership','warmonger','rev','tax','shrine','blood_thirst',
+    'broadcast','vr','zoo','bliss_den','restaurant','cap','potential'
+].forEach(function(k){
+    if (!global.city.morale.hasOwnProperty(k)){
+        global.city.morale[k] = 0;
+    }
+});
 
 if (!global.city['calendar']){
     global.city['calendar'] = {
@@ -1896,6 +1938,7 @@ if (!global.race['purgatory']){
         city: {},
         space: {},
         portal: {},
+        eden: {},
         tech: {},
     };
 }
@@ -1949,7 +1992,7 @@ export function keyMultiplier(){
     return number;
 }
 
-function convertVersion(version){
+export function convertVersion(version){
     let vNum = version.split('.',3);
     vNum[0] *= 100000;
     vNum[1] *= 1000;
@@ -1992,59 +2035,82 @@ export function resizeGame(){
 
 var affix_list = {
     si: ['K','M','G','T','P','E','Z','Y'],
-    sci: ['e3','e6','e9','e12','e15','e18','e21','e24'],
     sln: ['K','M','B','t','q','Q','s','S']
 };
+// Number formatting options, in the user's default locale
+var numFormatShort = new Intl.NumberFormat(undefined, {maximumFractionDigits: 2, maximumSignificantDigits: 3, roundingMode: 'trunc', roundingPriority: 'lessPrecision'});
+var numFormatLong = new Intl.NumberFormat(undefined, {maximumFractionDigits: 2, maximumSignificantDigits: 4, roundingMode: 'trunc', roundingPriority: 'lessPrecision'});
+// Constant value that is used frequently
+const ADD_16_ULP = 1 + (16 * Number.EPSILON);
 
-export function sizeApproximation(value,precision,fixed){
-    let result = 0;
-    let affix = '';
-    let neg = value < 0 ? true : false;
-    if (neg){
-        value *= -1;
+/**
+ * Return a locale-dependent string that represents the significance of the input value.
+ * Numbers are typically represented with 3 or 4 significant figures.
+ * Abbreviations are not applied to numbers less than 10,000.
+ *
+ * All input values are truncated toward 0 when precision reduction is required.
+ * Trailing fractional zeroes are never printed, regardless of the apparent significant figure requirement.
+ *
+ * @arg {Number} value - The value to format
+ * @arg {Number} precision - The maximum number of fractional digits to display
+ * @arg {Boolean} precise - Do not apply abbreviation and display all integer significant figures in the value.
+ * @arg {Boolean} exact - Do not apply abbreviation and display all significant figures in the value.
+ * @return {String}
+ */
+export function sizeApproximation(value, precision = 1, precise = false, exact = false){
+    let absValue = Math.abs(value);
+    let oom = Math.floor(Math.log10(absValue));
+
+    // Increase magnitude of all numbers by 16 to 32 ULP to avoid rounding issues
+    absValue *= ADD_16_ULP;
+    // Explicitly avoid adding anything to either -0 or +0 to avoid altering the sign
+    value = value<0 ? -absValue : value>0 ? absValue : value;
+
+    // Exact mode:
+    //  The number of significant figures is not limited in any way.
+    //  The number of fractional digits is limited by the precision argument.
+    if (exact){
+        return value.toLocaleString(undefined, {maximumFractionDigits: precision, roundingMode: 'trunc'});
     }
-    if (value <= 9999){
-        result = +value.toFixed(precision);
+
+    // Fixed mode:
+    //  The number of significant figures is at least 5, but may increase for large values.
+    //  The number of fractional digits is limited by the precision argument, but may be reduced for large values.
+    else if (oom < 4 || precise){
+        // The objective here is to provide high precision for both large and small numbers,
+        // while preventing excess precision for large numbers that also have many fractional digits.
+        let maxSigFigs = Math.max(oom + 1,          // Full precision for the integer component of large numbers (at least 1e4)
+                                  precision + 1,    // Requested precision for values with only 1 leading digit
+                                  5);               // Always allow 5 sigfigs, not only 4, for numbers where 1e2 <= x < 1e4
+        return value.toLocaleString(undefined, {maximumSignificantDigits: maxSigFigs, maximumFractionDigits: precision, roundingMode: 'trunc', roundingPriority: 'lessPrecision'});
     }
-    else if (value < 1000000){
-        affix = affix_list[global.settings.affix][0];
-        result = fixed ? +(value / 1000).toFixed(1) : (Math.floor(value / 100) / 10);
-    }
-    else if (value < 1000000000){
-        affix = affix_list[global.settings.affix][1];
-        result = fixed ? +(value / 1000000).toFixed(1) : (Math.floor(value / 10000) / 100);
-    }
-    else if (value < 1000000000000){
-        affix = affix_list[global.settings.affix][2];
-        result = fixed ? +(value / 1000000000).toFixed(1) : (Math.floor(value / 10000000) / 100);
-    }
-    else if (value < 1000000000000000){
-        affix = affix_list[global.settings.affix][3];
-        result = fixed ? +(value / 1000000000000).toFixed(1) : (Math.floor(value / 10000000000) / 100);
-    }
-    else if (value < 1000000000000000000){
-        affix = affix_list[global.settings.affix][4];
-        result = fixed ? +(value / 1000000000000000).toFixed(1) : (Math.floor(value / 10000000000000) / 100);
-    }
-    else if (value < 1000000000000000000000){
-        affix = affix_list[global.settings.affix][5];
-        result = fixed ? +(value / 1000000000000000000).toFixed(1) : (Math.floor(value / 10000000000000000) / 100);
-    }
-    else if (value < 1000000000000000000000000){
-        affix = affix_list[global.settings.affix][6];
-        result = fixed ? +(value / 1000000000000000000000).toFixed(1) : (Math.floor(value / 10000000000000000000) / 100);
-    }
+
     else {
-        affix = affix_list[global.settings.affix][7];
-        result = fixed ? +(value / 1000000000000000000000000).toFixed(1) : (Math.floor(value / 10000000000000000000000) / 100);
+        const oomMod3 = oom % 3;
+        const dispShort = oom === 4; // Reduce significant figures from 4 to 3 for numbers below 100,000
+        const forceSI = global.settings.affix !== 'eng' && oom >= 27;
+        // Reduce displayed order of magnitude to the nearest multiple of 3, except for SI mode
+        if (global.settings.affix !== 'sci' && !forceSI){
+            oom -= oomMod3;
+        }
+
+        let affix;
+        if (global.settings.affix === 'sci' || global.settings.affix === 'eng' || forceSI){
+            // Manually build SI suffix to guarantee that the 'e' is lowercase for aesthetic preference
+            affix = 'e' + oom;
+        } else {
+            // Get the string suffix from the configured lookup table
+            affix = affix_list[global.settings.affix][(oom / 3) - 1];
+        }
+
+        value /= (10**oom);
+
+        if (dispShort){
+            return numFormatShort.format(value) + affix;
+        } else {
+            return numFormatLong.format(value) + affix;
+        }
     }
-    if (result >= 100){
-        result = +result.toFixed(1);
-    }
-    if (neg){
-        result *= -1;
-    }
-    return result + affix;
 }
 
 $(window).resize(function(){
@@ -2177,8 +2243,8 @@ function setRegionStates(reset){
         base: [
             'showCiv','showCity','showIndustry','showPowerGrid','showMechLab','showShipYard',
             'showResearch','showCivic','showMil','showResources','showMarket','showStorage',
-            'showGenetics','showSpace','showDeep','showGalactic','showPortal','showOuter',
-            'showTau','showEjector','showCargo','showAlchemy','showGovernor','arpa','showPsychic'
+            'showGenetics','showSpace','showDeep','showGalactic','showPortal','showEden','showOuter',
+            'showTau','showEjector','showCargo','showAlchemy','showGovernor','arpa','showPsychic','showWish'
         ],
         space: [
             'moon','red','hell','sun','gas','gas_moon','belt','dwarf','alpha','proxima',
@@ -2186,6 +2252,7 @@ function setRegionStates(reset){
             'alien1','alien2','chthonian','titan','enceladus','triton','eris','kuiper'
         ],
         portal: ['fortress','badlands','pit','ruins','gate','lake','spire'],
+        eden: ['asphodel','elysium','isle','palace'],
         tau: ['home','red','roid','gas','gas2','star']
     };
     
@@ -2230,6 +2297,7 @@ export function clearStates(){
     global.interstellar = {};
     global.galaxy = {};
     global.portal = {};
+    global.eden = {};
     global.starDock = {};
     global.tauceti = {};
     global.civic = { new: 0 };
@@ -2297,6 +2365,7 @@ export function clearStates(){
     global.stats.sac = 0;
     global.stats.cattle = 0;
     global.stats.murders = 0;
+    global.stats.uDead = 0;
     global.settings.at = 0;
 
     global.settings.showEvolve = true;

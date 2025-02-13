@@ -14,6 +14,7 @@ import { prestigePage } from './prestige.js';
 import { eventsPage } from './events.js';
 import { arpaPage } from './arpa.js';
 import { changeLog } from './change.js';
+import { cancelSearchIndexing, search } from './search.js';
 
 $('body').empty();
 initPage();
@@ -84,7 +85,8 @@ function initPage(){
                 { key: 'space' },
                 { key: 'interstellar' },
                 { key: 'intergalactic' },
-                { key: 'hell' }
+                { key: 'hell' },
+                { key: 'edenic' }
             ]
         },
         {
@@ -99,7 +101,8 @@ function initPage(){
                 { key: 'deep_space' },
                 { key: 'interstellar' },
                 { key: 'intergalactic' },
-                { key: 'dimensional' }
+                { key: 'dimensional' },
+                { key: 'existential' }
             ]
         },
         {
@@ -143,6 +146,9 @@ function initPage(){
         },
         {
             key: 'changelog',
+        },
+        {
+            key: 'search',
         }
     ];
 
@@ -179,7 +185,16 @@ function initPage(){
     }
 }
 
-function menuDispatch(main,sub,frag){
+async function menuDispatch(main,sub,frag){
+    if(window.location.hash === "#search" && main !== "search"){
+        const until = (condition) => {
+            const poll = resolve => condition() ? resolve() : setTimeout(_ => poll(resolve), 16);
+            return new Promise(poll);
+        }
+        cancelSearchIndexing();
+        await until(_ => $(".temp-indexer").length === 0);
+    }
+    
     $(`#content`).removeClass('flex');
 
     var global_data = save.getItem('evolved') || false;
@@ -197,7 +212,7 @@ function menuDispatch(main,sub,frag){
 
         case 'faq':
             faqPage();
-            window.location.hash = `#${main}`;
+            setWindowHash(main,sub,frag);
             break;
 
         case 'gameplay':
@@ -266,6 +281,11 @@ function menuDispatch(main,sub,frag){
 
         case 'changelog':
             changeLog();
+            setWindowHash(main, sub, frag);
+            break;
+        
+        case 'search':
+            search();
             window.location.hash = `#${main}`;
             break;
     }
@@ -273,7 +293,11 @@ function menuDispatch(main,sub,frag){
 
 function setWindowHash(main,sub,frag){
     if (typeof frag === 'undefined'){
-        window.location.hash = `#${sub}-${main}`;
+        if(sub){
+            window.location.hash = `#${sub}-${main}`;
+        } else {
+            window.location.hash = `#${main}`;
+        }
     }
     else {
         window.location.hash = `#${sub}-${main}-${frag}`;
@@ -312,7 +336,7 @@ function mainPage(){
     let content = $(`#content`);
     clearElement(content);
 
-    let contribute = `<span class="has-text-caution">${['Beorseder','Rodrigodd','Volch'].join('</span>, <span class="has-text-caution">').replace(/, ([^,]*)$/, `, & $1`)}</span>`;
+    let contribute = `<span class="has-text-caution">${['Beorseder','Rodrigodd','Volch','Condoslime','Yarukishi'].join('</span>, <span class="has-text-caution">').replace(/, ([^,]*)$/, `, & $1`)}</span>`;
 
     let version = global['beta'] ? `beta v${global.version}.${global.beta}` : 'v'+global.version;
     content.append(`<div class="title has-text-warning">${loc(`wiki_main_title`)} - ${version}</div>`);

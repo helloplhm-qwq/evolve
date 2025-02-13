@@ -2,6 +2,7 @@ import { loc } from './../locale.js';
 import { universe_types } from './../space.js';
 import { infoBoxBuilder, sideMenu, createCalcSection } from './functions.js';
 import { prestigeCalc } from './p_res.js';
+import { massCalc } from './mechanics.js';
 
 export function resetsPage(content){
     let mainContent = sideMenu('create',content);
@@ -86,10 +87,12 @@ export function resetsPage(content){
             10: ['warning','plain']
         }
     });
-    section = createCalcSection(section,'bigbang','gain');
-    prestigeCalc(section,'plasmid',false,'bigbang');
-    prestigeCalc(section,'phage',false,'bigbang');
-    prestigeCalc(section,'dark',false,'bigbang');
+    let subSection = createCalcSection(section,'bigbang','gain');
+    prestigeCalc(subSection,'plasmid',false,'bigbang');
+    prestigeCalc(subSection,'phage',false,'bigbang');
+    prestigeCalc(subSection,'dark',false,'bigbang');
+    subSection = createCalcSection(section,'eject','mass');
+    massCalc(subSection);
     sideMenu('add',`resets-prestige`,'blackhole',loc('wiki_resets_blackhole'));
 
     // Vacuum Collapse
@@ -174,6 +177,7 @@ export function resetsPage(content){
     prestigeCalc(section,'harmony',false,'terraform');
     sideMenu('add',`resets-prestige`,'terraform',loc('wiki_resets_terraform'));
 
+    // Demonic Infusion
     section = infoBoxBuilder(mainContent,{ name: 'infusion', template: 'resets', paragraphs: 8, break: [4,8], h_level: 2,
         para_data: {
             2: [loc('resource_Artifact_name')],
@@ -190,6 +194,25 @@ export function resetsPage(content){
     section = createCalcSection(section,'descend','gain');
     prestigeCalc(section,'artifact',false,'descend');
     sideMenu('add',`resets-prestige`,'infusion',loc('wiki_resets_infusion'));
+
+    // Apotheosis
+    section = infoBoxBuilder(mainContent,{ name: 'apotheosis', template: 'resets', paragraphs: 7, break: [4,6,7], h_level: 2,
+        para_data: {
+            2: [loc('resource_Supercoiled_name')],
+            3: [1,loc('resource_Plasmid_name')],
+            4: [50,loc('resource_Demonic_Essence_name'),loc(`tab_eden`)],
+            5: [loc('wiki_resets_infusion')],
+            6: [9],
+            7: [loc('wiki_resets_apotheosis')],
+        },
+        data_color: {
+            2: ['danger'],
+            3: ['warning','danger'],
+        }
+    });
+    section = createCalcSection(section,'apotheosis','gain');
+    prestigeCalc(section,'supercoiled',false,'apotheosis');
+    sideMenu('add',`resets-prestige`,'apotheosis',loc('wiki_resets_apotheosis'));
 
     // AI Appoc
     section = infoBoxBuilder(mainContent,{ name: 'ai', template: 'resets', paragraphs: 8, break: [3,6,7,8], h_level: 2,
