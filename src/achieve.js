@@ -1,6 +1,7 @@
 import { global, set_alevel, set_ulevel } from './vars.js';
 import { clearElement, popover, flib, calc_mastery, masteryType, calcPillar, svgIcons, svgViewBox, format_emblem, getBaseIcon, sLevel, vBind, calcQueueMax, calcRQueueMax, messageQueue, eventActive, easterEgg, getHalloween, trickOrTreat, harmonyEffect } from './functions.js';
-import { races, genus_traits } from './races.js';
+import { races, genus_def } from './races.js';
+import { actions } from './actions.js';
 import { universe_affixes, universe_types, piracy } from './space.js';
 import { monsters } from './portal.js';
 import { loc } from './locale.js'
@@ -24,7 +25,7 @@ const achieve_list = {
         'extinct_satyr','extinct_phoenix','extinct_salamander','extinct_yeti','extinct_wendigo','extinct_tuskin','extinct_kamel','extinct_balorg',
         'extinct_imp','extinct_seraph','extinct_unicorn','extinct_synth','extinct_nano','extinct_ghast','extinct_shoggoth','extinct_dwarf',
         'extinct_raccoon','extinct_lichen','extinct_wyvern','extinct_beholder','extinct_djinn','extinct_narwhal','extinct_bombardier','extinct_nephilim',
-        'extinct_junker','extinct_sludge','extinct_ultra_sludge','extinct_custom'
+        'extinct_junker','extinct_sludge','extinct_ultra_sludge','extinct_custom','extinct_hybrid'
     ],
     genus: [
         'creator','genus_humanoid','genus_carnivore','genus_herbivore','genus_small','genus_giant','genus_reptilian','genus_avian',
@@ -40,12 +41,11 @@ const achieve_list = {
     ],
     universe: [
         'vigilante','squished','double_density','cross','macro','marble','heavyweight','whitehole','heavy','canceled',
-        'eviltwin','microbang','pw_apocalypse','fullmetal','pass','soul_sponge','nightmare','escape_velocity'
+        'eviltwin','microbang','pw_apocalypse','fullmetal','pass','soul_sponge','nightmare','escape_velocity','what_is_best'
     ],
     challenge: [
         'joyless','steelen','dissipated','technophobe','wheelbarrow','iron_will','failed_history','banana','pathfinder',
-        'ashanddust','exodus','obsolete','bluepill','retired','gross','lamentis','overlord',`adam_eve`,'endless_hunger',
-        //'what_is_best'
+        'ashanddust','exodus','obsolete','bluepill','retired','gross','lamentis','overlord',`adam_eve`,'endless_hunger'
     ],
 };
 
@@ -142,6 +142,11 @@ export const feats = {
         name: loc("feat_equilibrium_name"),
         desc: loc("feat_equilibrium_desc"),
         flair: loc("feat_equilibrium_flair")
+    },
+    planned_obsolescence: {
+        name: loc("feat_planned_obsolescence_name"),
+        desc: loc("feat_planned_obsolescence_desc"),
+        flair: loc("feat_planned_obsolescence_flair")
     },
     digital_ascension: {
         name: loc("feat_digital_ascension_name"),
@@ -634,14 +639,15 @@ export function checkAchievements(){
         let equilProgress = Array(5+1).fill(0); // Add 1 extra element to fill the "rank 0" position
         Object.keys(global.pillars).forEach(function(race){                
             if (races[race]){
-                if (!genus[races[race].type] || global.pillars[race] > genus[races[race].type]){
-                    genus[races[race].type] = global.pillars[race];
+                const type = races[race].type;
+                if (type !== 'hybrid' && (!genus[type] || global.pillars[race] > genus[type])){
+                    genus[type] = global.pillars[race];
                 }
                 rCnt++;
                 equilProgress[global.pillars[race]]++;
             }
         });
-        if (Object.keys(genus).length >= Object.keys(genus_traits).length - 2){
+        if (Object.keys(genus).length >= Object.keys(genus_def).length - 2){
             let rank = 5;
             Object.keys(genus).forEach(function(g){
                 if (genus[g] < rank && g !== 'hybrid'){
@@ -665,6 +671,10 @@ export function checkAchievements(){
                 }
             }
         }
+    }
+
+    if (global.stats['synth'] && Object.keys(global.stats.synth).length >= 32) {
+        unlockFeat('planned_obsolescence',false,5);
     }
 
     if (global.portal.hasOwnProperty('mechbay') && global.tech.hasOwnProperty('hell_spire') && global.tech.hell_spire >= 9){
@@ -1013,10 +1023,23 @@ export const perkList = {
             Object.keys(universe_types).forEach(function(universe){
                 let mastery = masteryType(universe,true,true);
                 if (universe === 'standard'){
-                    desc += `<span class="row"><span class="has-text-caution">${universe_types[universe].name}</span>: <span>${loc('perks_mastery_general',[`<span class="has-text-advanced">${+(mastery.g).toFixed(2)}%</span>`])}</span></span>`;
+                    desc += `
+                    <span class="row">
+                        <span class="has-text-caution">${universe_types[universe].name}</span>:
+                        <span>${loc('perks_mastery_general',[`<span class="has-text-advanced">${+(mastery.g).toFixed(2)}%</span>`])}
+                        </span>
+                    </span>`;
                 }
                 else if (global.stats.achieve['whitehole']){
-                    desc += `<span class="row"><span class="has-text-caution">${universe_types[universe].name}</span>: <span>${loc('perks_mastery_general',[`<span class="has-text-advanced">${+(mastery.g).toFixed(2)}%</span>`])}, ${loc('perks_mastery_universe',[`<span class="has-text-advanced">${+(mastery.u).toFixed(2)}%</span>`])}</span></span>`;
+                    desc += `
+                    <span class="row">
+                        <span class="has-text-caution">${universe_types[universe].name}</span>:
+                        <span>
+                            ${loc('perks_mastery_general',[`<span class="has-text-advanced">${+(mastery.g).toFixed(2)}%</span>`])},
+                            ${loc('perks_mastery_universe',[`<span class="has-text-advanced">${+(mastery.u).toFixed(2)}%</span>`])},
+                            ${loc('perks_mastery_total',[`<span class="has-text-advanced">${+(mastery.g+mastery.u).toFixed(2)}%</span>`])}
+                        </span>
+                    </span>`;
                 }
             });
             return desc;
@@ -1515,7 +1538,7 @@ export const perkList = {
             },
             {
                 desc(wiki){
-                    let bonus = wiki ? "1/2/3/4/5" : global.stats.achieve['technophobe'] ? global.stats.achieve.technophobe.l : 0;
+                    let bonus = wiki ? "4/8/12/16/20" : global.stats.achieve['technophobe'] ? global.stats.achieve.technophobe.l : 0;
                     return loc("achieve_perks_technophobe5",[bonus]);
                 },
                 active(){
@@ -1752,6 +1775,60 @@ export const perkList = {
         notes: [
             loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_gladiator_name`)}</span>`]),
             loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_gladiator_name`)}</span>`])
+        ]
+    },
+    what_is_best: {
+        name: loc(`achieve_what_is_best_name`),
+        group: [
+            {
+                desc(){
+                    return loc("achieve_perks_what_is_best1",[actions.portal.prtl_ruins.hell_forge.title(),'20%']);
+                },
+                active(){
+                    return global.stats.achieve['what_is_best'] && global.stats.achieve.what_is_best.e >= 1 ? true : false;
+                }
+            },
+            {
+                desc(){
+                    return loc("achieve_perks_what_is_best2",[actions.portal.prtl_spire.purifier.title(),'25 MW']);
+                },
+                active(){
+                    return global.stats.achieve['what_is_best'] && global.stats.achieve.what_is_best.e >= 2 ? true : false;
+                }
+            },
+            {
+                desc(){
+                    return loc("achieve_perks_what_is_best3",[actions.portal.prtl_pit.soul_forge.title(),actions.portal.prtl_pit.soul_attractor.title(),'1%']);
+                },
+                active(){
+                    return global.stats.achieve['what_is_best'] && global.stats.achieve.what_is_best.e >= 3 ? true : false;
+                }
+            },
+            {
+                desc(){
+                    return loc("achieve_perks_what_is_best4",[actions.portal.prtl_lake.transport.title(),3]);
+                },
+                active(){
+                    return global.stats.achieve['what_is_best'] && global.stats.achieve.what_is_best.e >= 4 ? true : false;
+                }
+            },
+            {
+                desc(){
+                    return loc("achieve_perks_what_is_best5");
+                },
+                active(){
+                    return global.stats.achieve['what_is_best'] && global.stats.achieve.what_is_best.e >= 5 ? true : false;
+                }
+            }
+        ],
+        notes: [
+            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_what_is_best_name`)}</span>`]),
+            loc(`wiki_perks_achievement_note_task`,[`<span class="has-text-caution">${loc(`achieve_what_is_best_name`)}</span>`]),
+            loc(`wiki_perks_achievement_note_task_num`,[1,`<span class="has-text-${global.stats.warlord.k ? `success` : `danger`}">${loc(`wiki_achieve_what_is_best_k`,[50])}</span>`]),
+            loc(`wiki_perks_achievement_note_task_num`,[2,`<span class="has-text-${global.stats.warlord.p ? `success` : `danger`}">${loc(`wiki_achieve_what_is_best_p`)}</span>`]),
+            loc(`wiki_perks_achievement_note_task_num`,[3,`<span class="has-text-${global.stats.warlord.a ? `success` : `danger`}">${loc(`wiki_achieve_what_is_best_a`,[250])}</span>`]),
+            loc(`wiki_perks_achievement_note_task_num`,[4,`<span class="has-text-${global.stats.warlord.r ? `success` : `danger`}">${loc(`wiki_achieve_what_is_best_r`)}</span>`]),
+            loc(`wiki_perks_achievement_note_task_num`,[5,`<span class="has-text-${global.stats.warlord.g ? `success` : `danger`}">${loc(`wiki_achieve_what_is_best_g`)}</span>`])
         ]
     },
     pathfinder: {
@@ -2798,7 +2875,7 @@ export function drawStats(){
     let hallowed = getHalloween();
     if (hallowed.active){
         let trick = '';
-        if (global.stats.cfood >= 13 || global.race['cataclysm'] || global.race['orbit_decayed']){
+        if (global.stats.cfood >= 13 || global.race['cataclysm'] || global.race['orbit_decayed'] || global.race['warlord']){
             trick = `<span>${trickOrTreat(7,12,true)}</span>`;
         }
         stats.append(`<div><span class="has-text-warning">${loc("achieve_stats_trickortreat")}</span> {{ s.cfood | format }} ${trick}</div>`);
@@ -2838,7 +2915,14 @@ export function drawStats(){
                 return (+(r).toFixed(2)).toLocaleString();
             },
             species(s){
-                return s === 'custom' ? global.custom.race0.name : loc(`race_${s}`);
+                switch (s){
+                    case 'custom':
+                        return global.custom.race0.name;
+                    case 'hybrid':
+                        return global.custom.race1.name;
+                    default:
+                        return loc(`race_${s}`);
+                }
             }
         }
     });

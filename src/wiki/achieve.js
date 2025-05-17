@@ -2,7 +2,7 @@ import { global } from './../vars.js';
 import { loc } from './../locale.js';
 import { clearElement, svgIcons, svgViewBox, format_emblem, getBaseIcon, sLevel } from './../functions.js';
 import { achievements, feats, universeAffix } from './../achieve.js';
-import { races, biomes, genus_traits } from './../races.js';
+import { races, biomes, genus_def } from './../races.js';
 import { monsters } from './../portal.js';
 import { vBind, popover } from './../functions.js';
 
@@ -38,7 +38,8 @@ const universeExclusives = {
     fullmetal: ['magic'],
     soul_sponge: ['magic'],
     nightmare: ['magic'],
-    escape_velocity: ['heavy']
+    escape_velocity: ['heavy'],
+    what_is_best: ['evil']
 };
 
 const achieveDescData = {
@@ -209,7 +210,7 @@ function achieveDesc(achievement,showFlair,universe){
     }
     else if (achievement === 'creator' || achievement === 'heavyweight'){
         let genus = `<div class="flexed">`;
-        Object.keys(genus_traits).sort().forEach(function (key){
+        Object.keys(genus_def).sort().forEach(function (key){
             if (key !== 'hybrid' && key !== 'omnivore'){
                 let label = ['carnivore','herbivore','omnivore'].includes(key) ? loc(`evo_${key}_title`) : loc(`genelab_genus_${key}`);
                 if (achievement === 'creator' ? global.stats.achieve[`genus_${key}`] && global.stats.achieve[`genus_${key}`][uAffix] >= 0 : global.stats.achieve[`genus_${key}`] && global.stats.achieve[`genus_${key}`].h >= 0){
@@ -235,7 +236,7 @@ function achieveDesc(achievement,showFlair,universe){
             });
         }
         let checked = `<div class="flexed">`;    
-        Object.keys(genus_traits).sort().forEach(function (key){
+        Object.keys(genus_def).sort().forEach(function (key){
             if (key !== 'omnivore'){
                 let label = ['carnivore','herbivore','omnivore'].includes(key) ? loc(`evo_${key}_title`) : loc(`genelab_genus_${key}`);
                 if (genus[key] && genus[key] >= 1){
@@ -333,7 +334,17 @@ function achieveDesc(achievement,showFlair,universe){
         wom_list = wom_list + `</div>`;
         popover(`a-${achievement}`,$(`<div class="has-text-label">${achievements[achievement].desc}</div><div>${loc(`wiki_achieve_${achievement}`)}</div>${wom_list}${flair}`));
     }
-    else if (achievement.includes('extinct_') && achievement.substring(8) !== 'custom'){
+    else if (achievement === 'what_is_best'){
+        let checklist = `<div class="list">`;
+        checklist = checklist + `<div class="has-text-${global.stats.warlord.k ? `success` : `danger`}">${loc(`wiki_achieve_what_is_best_k`,[50])}</div>`;
+        checklist = checklist + `<div class="has-text-${global.stats.warlord.p ? `success` : `danger`}">${loc(`wiki_achieve_what_is_best_p`)}</div>`;
+        checklist = checklist + `<div class="has-text-${global.stats.warlord.a ? `success` : `danger`}">${loc(`wiki_achieve_what_is_best_a`,[250])}</div>`;
+        checklist = checklist + `<div class="has-text-${global.stats.warlord.r ? `success` : `danger`}">${loc(`wiki_achieve_what_is_best_r`)}</div>`;
+        checklist = checklist + `<div class="has-text-${global.stats.warlord.g ? `success` : `danger`}">${loc(`wiki_achieve_what_is_best_g`)}</div>`;
+        checklist = checklist + `</div>`;
+        popover(`a-${achievement}`,$(`<div class="has-text-label">${achievements[achievement].desc}</div><div>${loc(`wiki_achieve_${achievement}`)}</div>${checklist}${flair}`));
+    }
+    else if (achievement.includes('extinct_') && achievement.substring(8) !== 'custom' && achievement.substring(8) !== 'hybrid'){
         let race = achievement.substring(8);
         popover(`a-${achievement}`,$(`<div class="has-text-label">${achievements[achievement].desc}</div><div>${loc('wiki_achieve_extinct_race',[loc(`race_${race}`)])}</div>${flair}`));
     }
@@ -397,7 +408,7 @@ function featDesc(feat,showFlair){
                 return 0;
             }
         }).forEach(function (key){
-            if (key !== 'protoplasm' && (key !== 'custom' || (key === 'custom' && global.stats.achieve['ascended'])) && (key !== 'hybrid' || (key === 'hybrid' && global.stats.achieve['what_is_best']))){
+            if (key !== 'protoplasm' && (key !== 'custom' || (key === 'custom' && global.stats.achieve['ascended'])) && (key !== 'hybrid' || (key === 'hybrid' && global.stats.achieve['what_is_best'] && global.stats.achieve.what_is_best.e >= 5))){
                 if (species[key] && species[key] >= 1){
                     checked = checked + `<span class="wide iclr${species[key]}">${races[key].name}</span>`;
                 }
@@ -439,6 +450,30 @@ function featDesc(feat,showFlair){
         });
         path += `</div>`;
         popover(`f-${feat}`,$(`<div class="wide has-text-label">${feats[feat].desc}</div><div>${loc(`wiki_feat_${feat}`)}</div>${path}${flair}`),{ wide: true, classes: 'w25' });
+    }
+    else if (feat === 'planned_obsolescence') {
+        let checked = `<div class="flexed wide">`;    
+        Object.keys(races).filter(r => !['junker','sludge','ultra_sludge','nano','synth','hellspawn'].includes(r)).sort(function(a,b){
+            if (races[a].hasOwnProperty('name') && races[b].hasOwnProperty('name')){
+                return (races[a].name || 'Zombie').localeCompare(races[b].name);
+            }
+            else {
+                return 0;
+            }
+        }).forEach(function (key){
+            if (key !== 'protoplasm' && (key !== 'custom' || (key === 'custom' && global.stats.achieve['ascended'])) && (key !== 'hybrid' || (key === 'hybrid' && global.stats.achieve['what_is_best']))){
+                if (global.stats['synth'] && global.stats.synth[key]){
+                    checked = checked + `<span class="wide iclr5">${races[key].name}</span>`;
+                }
+                else {
+                    checked = checked + `<span class="wide has-text-danger">${races[key].name}</span>`;
+                }
+            }
+        });
+        checked = checked + `</div>`;
+        popover(`f-${feat}`,$(`<div class="wide has-text-label">${feats[feat].desc}</div><div>${loc(`wiki_feat_${feat}`)}</div>${checked}${flair}`),{
+            wide: true
+        });
     }
     else {
         popover(`f-${feat}`,$(`<div class="has-text-label">${feats[feat].desc}</div><div>${loc(`wiki_feat_${feat}`)}</div>${flair}`));

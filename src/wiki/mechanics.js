@@ -1,7 +1,7 @@
 import { global } from './../vars.js';
 import { universeAffix } from './../achieve.js';
 import { loc } from './../locale.js';
-import { timeFormat, vBind, svgIcons, svgViewBox, calcGenomeScore } from './../functions.js';
+import { timeFormat, vBind, svgIcons, svgViewBox, calcGenomeScore, powerModifier } from './../functions.js';
 import { job_desc } from './../jobs.js';
 import { races, traits, planetTraits } from './../races.js';
 import { atomic_mass } from './../resources.js';
@@ -651,27 +651,7 @@ export function mechanicsPage(content){
     }
 
     { // Customs & Untapped Potential
-        let custom = infoBoxBuilder(mainContent,{ name: 'custom', template: 'mechanics', label: loc('wiki_mechanics_custom'), paragraphs: 14, break: [3,5,9,11,13], h_level: 2,
-            para_data: {
-                1: [loc('wiki_resets_ascension')],
-                2: [loc('wiki_resets_ascension')],
-                5: [loc('resource_Genes_name')],
-                6: [loc('resource_Genes_name')],
-                7: [2],
-                8: [loc('achieve_technophobe_name'),5,7],
-                9: [loc('tech_fanaticism'),loc('tech_deify')],
-                11: [0,loc('resource_Genes_name')],
-                12: [loc('resource_Genes_name'),loc('trait_untapped_name')],
-                13: [10],
-                14: [10,'1.4.0',loc('trait_overtapped_name')]
-            },
-            data_link: {
-                1: ['wiki.html#resets-prestige-ascension'],
-                2: ['wiki.html#resets-prestige-ascension'],
-                8: ['wiki.html#perks-prestige-technophobe'],
-                9: [(global.genes['transcendence'] ? 'wiki.html#civilized-tech-alt_fanaticism' : 'wiki.html#civilized-tech-fanaticism'),'wiki.html#early_space-tech-deify']
-            }
-        });
+        let custom = customRaceMechanics(mainContent,false);
         let subSection = createCalcSection(custom,'mechanics','untapped',loc('trait_untapped_name'));
         untappedCalc(subSection);
         sideMenu('add',`mechanics-gameplay`,`custom`,loc('wiki_mechanics_custom'));
@@ -745,6 +725,18 @@ export function mechanicsPage(content){
             `);
         });
         sideMenu('add',`mechanics-gameplay`,`dlord`,loc('wiki_mechanics_dlord'));
+    }
+
+    { // Evil Authority
+        infoBoxBuilder(mainContent,{ name: 'authority', template: 'mechanics', label: loc('wiki_mechanics_authority'), paragraphs: 5, break:[2,3,5], h_level: 2,
+            para_data: {
+                1: [loc('resource_Authority_name')],
+                2: [loc('resource_Authority_name'),'100%'],
+                3: ['100'],
+                4: ['100']
+            }
+        });
+        sideMenu('add',`mechanics-gameplay`,`authority`,loc('wiki_mechanics_authority'));
     }
 
     { // Syndicate
@@ -1181,6 +1173,49 @@ export function mechanicsPage(content){
 
         sideMenu('add',`mechanics-gameplay`,`wish`,loc('wiki_mechanics_wish'));
     }
+}
+
+export function customRaceMechanics(content,full){
+    let info = infoBoxBuilder(content,{ name: 'custom', template: 'mechanics', label: loc('wiki_mechanics_custom'), paragraphs: 26, break: [3,5,9,11,13,16,18,19,20,21,22,23,24,25,26], h_level: 2, full: full,
+        text: {
+            18: `wiki_mechanics_custom_oppose`,
+            19: `wiki_mechanics_custom_oppose`,
+            20: `wiki_mechanics_custom_oppose`,
+            21: `wiki_mechanics_custom_oppose`,
+            22: `wiki_mechanics_custom_oppose`,
+            23: `wiki_mechanics_custom_oppose`,
+            24: `wiki_mechanics_custom_oppose`,
+            25: `wiki_mechanics_custom_oppose`,
+            26: `wiki_mechanics_custom_oppose3`,
+        },
+        para_data: {
+            1: [loc('wiki_resets_ascension')],
+            2: [loc('wiki_resets_ascension')],
+            5: [loc('resource_Genes_name')],
+            6: [loc('resource_Genes_name')],
+            7: [2,1],
+            8: [loc('achieve_technophobe_name'),4,20],
+            9: [loc('tech_fanaticism'),loc('tech_deify')],
+            11: [0,loc('resource_Genes_name')],
+            12: [loc('resource_Genes_name'),loc('trait_untapped_name')],
+            18: [loc('genelab_genus_humanoid'),loc('genelab_genus_fungi')],
+            19: [loc('genelab_genus_carnivore'),loc('genelab_genus_herbivore')],
+            20: [loc('genelab_genus_small'),loc('genelab_genus_giant')],
+            21: [loc('genelab_genus_reptilian'),loc('genelab_genus_avian')],
+            22: [loc('genelab_genus_plant'),loc('genelab_genus_insectoid')],
+            23: [loc('genelab_genus_polar'),loc('genelab_genus_heat')],
+            24: [loc('genelab_genus_sand'),loc('genelab_genus_aquatic')],
+            25: [loc('genelab_genus_angelic'),loc('genelab_genus_demonic')],
+            26: [loc('genelab_genus_fey'),loc('genelab_genus_eldritch'),loc('genelab_genus_synthetic')],
+        },
+        data_link: {
+            1: ['wiki.html#resets-prestige-ascension'],
+            2: ['wiki.html#resets-prestige-ascension'],
+            8: ['wiki.html#perks-prestige-technophobe'],
+            9: [(global.genes['transcendence'] ? 'wiki.html#civilized-tech-alt_fanaticism' : 'wiki.html#civilized-tech-fanaticism'),'wiki.html#early_space-tech-deify']
+        }
+    });
+    return info;
 }
 
 function jobStressCalc(info){
@@ -2136,6 +2171,7 @@ export function massCalc(info){
     let inputs = {
         solar_tot: { val: undefined },
         exotic_tot: { val: undefined },
+        gWell: { val: undefined },
         grav: { val: true }
     }
     let resVariables = $(`<div></div>`);
@@ -2186,7 +2222,25 @@ export function massCalc(info){
             <h2 class="has-text-caution">${loc('wiki_calc_mass_MW_tot')}</h2>
         </div>
         <div>
-            <span>20 + (({{ i.solar_tot.val, 'solar_tot' | generic }} - 8) * {{ false | amountMW }}) + ({{ i.exotic_tot.val, 'exotic_tot' | generic }} * {{ true | amountMW }})</span><span v-show="s.result.MWVis"> = {{ | calcMW }}</span>
+            <span>{{ | baseMW }} + (({{ i.solar_tot.val, 'solar_tot' | generic }} - 8) * {{ false | amountMW }}) + ({{ i.exotic_tot.val, 'exotic_tot' | generic }} * {{ true | amountMW }})</span><span v-show="s.result.MWVis"> = {{ true, 'MWTot' | calcMW }}</span>
+        </div>
+        <div>
+            <h2 class="has-text-caution">${loc('wiki_calc_mass_MW_adj_10k')}</h2>
+        </div>
+        <div>
+            <span>{{ false, 'MW10k' | calcMW }}</span><span v-show="s.result.MWIs10k"> + ({{ s.result.MWTot, 'MW_tot' | generic }} - 10000) ** 0.975</span><span v-show="s.result.MWVis"> = {{ false, 'MWAdj10k' | calcMW }}</span>
+        </div>
+        <div>
+            <h2 class="has-text-caution">${loc('wiki_calc_mass_MW_adj_20k')}</h2>
+        </div>
+        <div>
+            <span>{{ false, 'MW20k' | calcMW }}</span><span v-show="s.result.MWIs20k"> + ({{ s.result.MWAdj10k, 'MW_adj_10k' | generic }} - 20000) ** 0.95</span><span v-show="s.result.MWVis"> = {{ false, 'MWAdj20k' | calcMW }}</span>
+        </div>
+        <div>
+            <h2 class="has-text-caution">${loc('wiki_calc_mass_MW_adj_30k')}</h2>
+        </div>
+        <div>
+            <span>{{ false, 'MW30k' | calcMW }}</span><span v-show="s.result.MWIs30k"> + ({{ s.result.MWAdj20k, 'MW_adj_20k' | generic }} - 30000) ** 0.925</span><span v-show="s.result.MWVis"> = {{ false, 'MWAdj30k' | calcMW }}</span>
         </div>
         <div>
             <h2 class="has-text-caution">${loc('wiki_calc_mass_time_to_explode')}</h2>
@@ -2200,6 +2254,7 @@ export function massCalc(info){
         <div>
             <div class="calcInput"><span>${loc('wiki_calc_mass_solar_tot')}</span> <b-numberinput :input="val('solar_tot')" min="8" v-model="i.solar_tot.val" :controls="false"></b-numberinput></div>
             <div class="calcInput"><span>${loc('wiki_calc_mass_exotic_tot')}</span> <b-numberinput :input="val('exotic_tot')" min="0" v-model="i.exotic_tot.val" :controls="false"></b-numberinput></div>
+            <div class="calcInput"><span>${loc('achieve_escape_velocity_name')}</span> <b-numberinput :input="val('gWell')" min="0" max="5" v-model="i.gWell.val" :controls="false"></b-numberinput></div>
             <div class="calcInput"><b-checkbox class="patrol" v-model="i.grav.val">${loc('tech_gravity_convection')}</b-checkbox></div>
         </div>
         <div class="calcButton">
@@ -2233,6 +2288,7 @@ export function massCalc(info){
                 });
                 inputs.solar_tot.val = undefined;
                 inputs.exotic_tot.val = undefined;
+                inputs.gWell.val = undefined;
                 inputs.grav.val = true;
             },
             importInputs(){
@@ -2250,7 +2306,10 @@ export function massCalc(info){
                 if (global.tech['roid_eject']){
                     inputs.solar_tot.val += 0.225 * global.tech['roid_eject'] * (1 + (global.tech['roid_eject'] / 12));
                 }
+                inputs.solar_tot.val = +(inputs.solar_tot.val).toFixed(5);
                 inputs.exotic_tot.val = global.interstellar['stellar_engine'] ? global.interstellar.stellar_engine.exotic : 0;
+                inputs.exotic_tot.val = +(inputs.exotic_tot.val).toFixed(5);
+                inputs.gWell.val = global.stats.achieve?.escape_velocity?.h ?? 0;
                 inputs.grav.val = global.tech['gravity'] && global.tech.gravity >= 2;
             }
         },
@@ -2266,13 +2325,21 @@ export function massCalc(info){
                     case 'exotic':
                     case 'exotic_tot':
                     case 'MW':
+                    case 'MW_tot':
+                    case 'MW_adj_10k':
+                    case 'MW_adj_20k':
+                    case 'MW_adj_30k':
                         return loc('wiki_calc_mass_' + type);
                     default:
                         return loc('resource_' + type + '_name') + '/s';
                 }
             },
+            baseMW(){
+                return powerModifier(20);
+            },
             amountMW(exotic){
-                return (inputs.grav.val ? 13.5 : 7.5) * (exotic ? 10 : 1);
+                let gWellFactor = (1 + (inputs.gWell.val ?? 0) * 0.02) ;
+                return +powerModifier((inputs.grav.val ? 13.5 : 7.5) * (exotic ? 10 : 1) * gWellFactor).toFixed(2);
             },
             calc(recalc, type){
                 if (recalc){
@@ -2292,7 +2359,8 @@ export function massCalc(info){
                         });
                         show.result.kt = +(total).toFixed(4);
                         show.result.solar = +(total / 10000000000).toFixed(10);
-                        show.result.MW = +(show.result.solar * (inputs.grav.val ? 13.5 : 7.5) + show.result.exotic * (inputs.grav.val ? 135 : 75)).toFixed(10);
+                        let massRatio = (inputs.grav.val ? 13.5 : 7.5) * (1 + inputs.gWell.val * 0.02);
+                        show.result.MW = +(show.result.solar * massRatio + show.result.exotic * massRatio * 10).toFixed(10);
                     }
                     else {
                         show.result.kt = undefined;
@@ -2315,18 +2383,64 @@ export function massCalc(info){
                     show.result.exotic = undefined;
                 }
             },
-            calcMW(){
-                if (inputs.solar_tot.val !== undefined && inputs.exotic_tot.val !== undefined){
-                    show.result.MWVis = true;
-                    
-                    show.result.MWTot = +(20 + ((inputs.solar_tot.val - 8) * (inputs.grav.val ? 13.5 : 7.5) + inputs.exotic_tot.val * (inputs.grav.val ? 135 : 75))).toFixed(10);
-                    
-                    return show.result.MWTot;
+            calcMW(recalc, type){
+                if (recalc){
+                    if (inputs.solar_tot.val !== undefined && inputs.exotic_tot.val !== undefined){
+                        show.result.MWVis = true;
+                        
+                        let massRatio = (inputs.grav.val ? 13.5 : 7.5) * (1 + inputs.gWell.val * 0.02);
+                        let rawPower = powerModifier(20 + ((inputs.solar_tot.val - 8) * massRatio + inputs.exotic_tot.val * massRatio * 10));
+                        show.result.MWTot = +rawPower.toFixed(2);
+                        let adjPower = rawPower;
+
+                        show.result.MWIs10k = adjPower > 10000;
+                        if (show.result.MWIs10k){
+                            adjPower = 10000 + (adjPower - 10000) ** 0.975;
+                            show.result.MWIs10k = true;
+                            show.result.MW10k = 10000;
+                        }
+                        else {
+                            show.result.MW10k = +adjPower.toFixed(2);
+                        }
+                        show.result.MWAdj10k = +adjPower.toFixed(2);
+
+                        show.result.MWIs20k = adjPower > 20000;
+                        if (show.result.MWIs20k){
+                            adjPower = 20000 + (adjPower - 20000) ** 0.95;
+                            show.result.MW20k = 20000;
+                        }
+                        else {
+                            show.result.MW20k = +adjPower.toFixed(2);
+                        }
+                        show.result.MWAdj20k = +adjPower.toFixed(2);
+
+                        show.result.MWIs30k = adjPower > 30000;
+                        if (show.result.MWIs30k){
+                            adjPower = 30000 + (adjPower - 30000) ** 0.925;
+                            show.result.MW30k = 30000;
+                        }
+                        else {
+                            show.result.MW30k = +adjPower.toFixed(2);
+                        }
+                        show.result.MWAdj30k = +adjPower.toFixed(2);
+                        
+                        return show.result.MWTot;
+                    }
+                    else {
+                        show.result.MWVis = false;
+                        show.result.MW10k = 10000;
+                        show.result.MW20k = 20000;
+                        show.result.MW30k = 30000;
+                        show.result.MWIs10k = true;
+                        show.result.MWIs20k = true;
+                        show.result.MWIs30k = true;
+                        show.result.MWTot = undefined;
+                        show.result.MWAdj10k = undefined;
+                        show.result.MWAdj20k = undefined;
+                        show.result.MWAdj30k = undefined;
+                    }
                 }
-                else {
-                    show.result.MWVis = false;
-                    show.result.MWTot = undefined;
-                }
+                return show.result[type];
             },
             calcTime(){
                 if (inputs.exotic_tot.val !== undefined && show.result.exoVis){

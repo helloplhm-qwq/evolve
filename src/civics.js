@@ -5,7 +5,9 @@ import { universeAffix } from './achieve.js';
 import { races, racialTrait, traits, planetTraits, biomes, fathomCheck, blubberFill } from './races.js';
 import { defineGovernor, govActive } from './governor.js';
 import { drawTech } from  './actions.js';
+import { soulForgeSoldiers } from './portal.js';
 import { jobScale } from './jobs.js';
+import { templeCount } from './actions.js';
 import { astrologySign, astroVal } from './seasons.js';
 import { warhead } from './resets.js';
 
@@ -147,11 +149,11 @@ export function govTitle(id){
     return loc(`civics_gov${global.civic.foreign[`gov${id}`].name.s0}`,[global.civic.foreign[`gov${id}`].name.s1]);
 }
 
-const government_desc = (function(){
-    return {
+const government_desc = (function(type){
+    let desc = {
         anarchy: loc('govern_anarchy_effect'),
         autocracy: loc('govern_autocracy_effect',govEffect.autocracy()),
-        democracy: loc('govern_democracy_effect',govEffect.democracy()),
+        democracy: loc(global.race.universe === 'evil' ? 'govern_managed_democracy_effect' : 'govern_democracy_effect',govEffect.democracy()),
         oligarchy: global.tech['high_tech'] && global.tech['high_tech'] >= 12 ? loc('govern_oligarchy_effect_alt',[govEffect.oligarchy()[1]]) : loc('govern_oligarchy_effect',[govEffect.oligarchy()[0], govEffect.oligarchy()[1]]),
         theocracy: loc('govern_theocracy_effect',govEffect.theocracy()),
         theocracy_alt: loc('govern_theocracy_effect_alt',govEffect.theocracy()),
@@ -164,6 +166,21 @@ const government_desc = (function(){
         magocracy: loc('govern_magocracy_effect',govEffect.magocracy()),
         dictator: loc('govern_dictator_effect',govEffect.dictator()),
     };
+    let effect = desc[type];
+    if (global.race.universe === 'evil'){
+        switch (type){
+            case 'autocracy':
+                effect += ` ${loc(`govern_authority`,[8])} ${loc(`govern_authority_cap`,[10])}`;
+                break;
+            case 'dictator':
+                effect +=  ` ${loc(`govern_authority`,[12])}`;
+                break;
+            case 'oligarchy':
+                effect +=  ` ${loc(`govern_authority_cap`,[20])}`;
+                break;
+        }
+    }
+    return effect;
 });
 
 export const govEffect = {
@@ -288,6 +305,7 @@ function government(govern){
         data: global.civic['govern'],
         filters: {
             govern(type){
+                if (global.race.universe === 'evil' && type === 'democracy'){ return loc(`govern_managed_democracy`); } 
                 return loc(`govern_${type}`);
             },
             set(g){
@@ -326,7 +344,7 @@ function government(govern){
             if (effect_type === 'theocracy' && global.genes['ancients'] && global.genes['ancients'] >= 2 && global.civic.priest.display){
                 effect_type = 'theocracy_alt';
             }
-            return $(`<div>${govDescription(global.civic.govern.type)}</div><div class="has-text-advanced">${government_desc()[effect_type]}</div>`);
+            return $(`<div>${govDescription(global.civic.govern.type)}</div><div class="has-text-advanced">${government_desc(effect_type)}</div>`);
         }
     );
 
@@ -342,6 +360,12 @@ function government(govern){
 function govDescription(type){
     if (global.race['witch_hunter'] && type === 'magocracy'){
         return loc(`witch_hunter_magocracy`);
+    }
+    else if (global.race.universe === 'evil'){
+        switch (type){
+            case 'democracy':
+                return loc(`govern_managed_democracy_desc`);
+        }
     }
     return loc(`govern_${type}_desc`);
 }
@@ -364,28 +388,28 @@ function drawGovModal(){
         if (global.civic.govern.type !== 'autocracy'){
             body.append($(`<button class="button gap" data-gov="autocracy" @click="setGov('autocracy')">${loc(`govern_autocracy`)}</button>`));
         }
-        if (global.civic.govern.type !== 'democracy'){
-            body.append($(`<button class="button gap" data-gov="democracy" @click="setGov('democracy')">${loc(`govern_democracy`)}</button>`));
+        if (global.civic.govern.type !== 'democracy' && !global.race['warlord']){
+            body.append($(`<button class="button gap" data-gov="democracy" @click="setGov('democracy')">${global.race.universe === 'evil' ? loc(`govern_managed_democracy`) : loc(`govern_democracy`)}</button>`));
         }
-        if (global.civic.govern.type !== 'oligarchy'){
+        if (global.civic.govern.type !== 'oligarchy' && !global.race['warlord']){
             body.append($(`<button class="button gap" data-gov="oligarchy" @click="setGov('oligarchy')">${loc(`govern_oligarchy`)}</button>`));
         }
-        if (global.tech['gov_theo'] && global.civic.govern.type !== 'theocracy'){
+        if (global.tech['gov_theo'] && global.civic.govern.type !== 'theocracy' && !global.race['warlord']){
             body.append($(`<button class="button gap" data-gov="theocracy" @click="setGov('theocracy')">${loc(`govern_theocracy`)}</button>`));
         }
-        if (global.tech['govern'] >= 2 && global.civic.govern.type !== 'republic'){
+        if (global.tech['govern'] >= 2 && global.civic.govern.type !== 'republic' && !global.race['warlord']){
             body.append($(`<button class="button gap" data-gov="republic" @click="setGov('republic')">${loc(`govern_republic`)}</button>`));
         }
-        if (global.tech['gov_soc'] && global.civic.govern.type !== 'socialist'){
+        if (global.tech['gov_soc'] && global.civic.govern.type !== 'socialist' && !global.race['warlord']){
             body.append($(`<button class="button gap" data-gov="socialist" @click="setGov('socialist')">${loc(`govern_socialist`)}</button>`));
         }
-        if (global.tech['gov_corp'] && global.civic.govern.type !== 'corpocracy'){
+        if (global.tech['gov_corp'] && global.civic.govern.type !== 'corpocracy' && !global.race['warlord']){
             body.append($(`<button class="button gap" data-gov="corpocracy" @click="setGov('corpocracy')">${loc(`govern_corpocracy`)}</button>`));
         }
-        if (global.tech['govern'] >= 3 && global.civic.govern.type !== 'technocracy'){
+        if (global.tech['govern'] >= 3 && global.civic.govern.type !== 'technocracy' && !global.race['warlord']){
             body.append($(`<button class="button gap" data-gov="technocracy" @click="setGov('technocracy')">${loc(`govern_technocracy`)}</button>`));
         }
-        if (global.tech['gov_fed'] && global.civic.govern.type !== 'federation'){
+        if (global.tech['gov_fed'] && global.civic.govern.type !== 'federation' && !global.race['warlord']){
             body.append($(`<button class="button gap" data-gov="federation" @click="setGov('federation')">${loc(`govern_federation`)}</button>`));
         }
         if (global.tech['gov_mage'] && global.civic.govern.type !== 'magocracy'){
@@ -452,7 +476,7 @@ function drawGovModal(){
             if (effectType === 'theocracy' && global.genes['ancients'] && global.genes['ancients'] >= 2 && global.civic.priest.display){
                 effectType = 'theocracy_alt';
             }
-            return $(`<div>${govDescription(govType)}</div><div class="has-text-advanced">${government_desc()[effectType]}</div>`);
+            return $(`<div>${govDescription(govType)}</div><div class="has-text-advanced">${government_desc(effectType)}</div>`);
         },
         {
             elm: `#govModal button`,
@@ -777,67 +801,58 @@ export function checkControlling(gov){
 }
 
 function spyAction(sa,g){
-    switch (sa){
-        case 'influence':
-            {
-                if (global.tech['spy'] && global.tech['spy'] >= 2 && global.civic.foreign[`gov${g}`].spy >= 1 && global.civic.foreign[`gov${g}`].sab === 0){
-                    let timer = global.tech['spy'] >= 4 ? 200 : 300;
-                    if (global.civic.foreign[`gov${g}`].spy === 1){ timer *= 1.5; }
-                    else if (global.civic.foreign[`gov${g}`].spy >= 3){ timer -= (global.civic.foreign[`gov${g}`].spy - 2) * 50; }
-                    if (global.genes.hasOwnProperty('governor') && global.genes.governor >= 3){ timer *= 0.9; }
-                    timer = Math.ceil(timer);
-                    if (global.race['befuddle']){
-                        timer = Math.round(timer * (1 - traits.befuddle.vars()[0] / 100));
-                    }
-                    let fathom = fathomCheck('dryad');
-                    if (fathom > 0){
-                        timer = Math.round(timer * (1 - traits.befuddle.vars(1)[0] / 100 * fathom));
-                    }
-                    global.civic.foreign[`gov${g}`].sab = timer;
-                    global.civic.foreign[`gov${g}`].act = 'influence';
-                }
+    // Espionage researched
+    if (global.tech['spy'] && global.tech['spy'] >= 2){
+        // At least 1 spy and no ongoing espionage action
+        let num_spies = global.civic.foreign[`gov${g}`].spy;
+        if (num_spies >= 1 && global.civic.foreign[`gov${g}`].sab === 0){
+            let timer;
+            let can_sab = false;
+
+            switch (sa){
+                case 'influence':
+                    // Timer is minimized at 5 spies (7 without spy gadgets)
+                    timer = global.tech['spy'] >= 4 ? 200 : 300;
+                    if (num_spies === 1){ timer *= 1.5; }
+                    else if (num_spies >= 3){ timer -= (num_spies - 2) * 50; }
+                    timer = Math.max(timer, 50);
+                    can_sab = true;
+                    break;
+
+                case 'sabotage':
+                    // Timer is minimized at 8 spies (12 without spy gadgets)
+                    timer = global.tech['spy'] >= 4 ? 400 : 600;
+                    if (num_spies >= 2){ timer -= (num_spies - 1) * 50; }
+                    timer = Math.max(timer, 50);
+                    can_sab = true;
+                    break;
+
+                case 'incite':
+                    // Timer is minimized at 8 spies (11 without spy gadgets)
+                    if (g >= 3){ break; }
+                    timer = global.tech['spy'] >= 4 ? 600 : 900;
+                    if (num_spies <= 2){ timer *= 1.5; }
+                    else if (num_spies >= 4){ timer -= (num_spies - 3) * 100; }
+                    timer = Math.max(timer, 100);
+                    can_sab = true;
+                    break;
             }
-            break;
-        case 'sabotage':
-            {
-                if (global.tech['spy'] && global.tech['spy'] >= 2 && global.civic.foreign[`gov${g}`].spy >= 1 && global.civic.foreign[`gov${g}`].sab === 0){
-                    let timer = global.tech['spy'] >= 4 ? 400 : 600;
-                    if (global.civic.foreign[`gov${g}`].spy >= 2){ timer -= (global.civic.foreign[`gov${g}`].spy - 1) * 50; }
-                    if (global.genes.hasOwnProperty('governor') && global.genes.governor >= 3){ timer *= 0.9; }
-                    timer = Math.ceil(timer);
-                    if (global.race['befuddle']){
-                        timer = Math.round(timer * (1 - traits.befuddle.vars()[0] / 100));
-                    }
-                    let fathom = fathomCheck('dryad');
-                    if (fathom > 0){
-                        timer = Math.round(timer * (1 - traits.befuddle.vars(1)[0] / 100 * fathom));
-                    }
-                    global.civic.foreign[`gov${g}`].sab = timer;
-                    global.civic.foreign[`gov${g}`].act = 'sabotage';
+
+            // This part of the timer computation is currently common to all spy actions
+            if (can_sab){
+                if (global.genes.hasOwnProperty('governor') && global.genes.governor >= 3){ timer *= 0.9; }
+                timer = Math.ceil(timer);
+                if (global.race['befuddle']){
+                    timer = Math.round(timer * (1 - traits.befuddle.vars()[0] / 100));
                 }
-            }
-            break;
-        case 'incite':
-            {
-                if (g >= 3){ break; }
-                else if (global.tech['spy'] && global.tech['spy'] >= 2 && global.civic.foreign[`gov${g}`].spy >= 1 && global.civic.foreign[`gov${g}`].sab === 0){
-                    let timer = global.tech['spy'] >= 4 ? 600 : 900;
-                    if (global.civic.foreign[`gov${g}`].spy <= 2){ timer *= 1.5; }
-                    else if (global.civic.foreign[`gov${g}`].spy >= 4){ timer -= (global.civic.foreign[`gov${g}`].spy - 3) * 100; }
-                    if (global.genes.hasOwnProperty('governor') && global.genes.governor >= 3){ timer *= 0.9; }
-                    timer = Math.ceil(timer);
-                    if (global.race['befuddle']){
-                        timer = Math.round(timer * (1 - traits.befuddle.vars()[0] / 100));
-                    }
-                    let fathom = fathomCheck('dryad');
-                    if (fathom > 0){
-                        timer = Math.round(timer * (1 - traits.befuddle.vars(1)[0] / 100 * fathom));
-                    }
-                    global.civic.foreign[`gov${g}`].sab = timer;
-                    global.civic.foreign[`gov${g}`].act = 'incite';
+                let fathom = fathomCheck('dryad');
+                if (fathom > 0){
+                    timer = Math.round(timer * (1 - traits.befuddle.vars(1)[0] / 100 * fathom));
                 }
+                global.civic.foreign[`gov${g}`].sab = timer;
+                global.civic.foreign[`gov${g}`].act = sa;
             }
-            break;
+        }
     }
 }
 
@@ -1159,10 +1174,10 @@ function hireMerc(num){
 export function buildGarrison(garrison,full){
     clearElement(garrison);
     if (global.tech['world_control'] && !global.race['truepath']){
-        garrison.append($(`<div class="header"><h2 class="has-text-warning">${loc('civics_garrison')}</h2> - <span class="has-text-success">${loc('rating')} <span class="defenseRating">{{ g.workers | hell | rating }}</span></div>`));
+        garrison.append($(`<div class="header"><h2 class="has-text-warning">${loc('civics_garrison')}</h2> - <span class="has-text-success"><span class="defenseRating">${loc('rating')} {{ g.workers | hell | rating }}</span> - <span class="soldierRating"><span class="has-text-warning">${loc(`civics_garrison_soldier_rating`)}</span> {{ g.workers | single | rating(true) }}</span></div>`));
     }
     else {
-        garrison.append($(`<div class="header"><h2 class="has-text-warning">${loc('civics_garrison')}</h2> - <span class="has-text-success">${loc('rating')} <span class="defenseRating">{{ g.workers | hell | rating }}</span> / <span class="offenseRating">{{ g.raid | rating }}</span></span></div>`));
+        garrison.append($(`<div class="header"><h2 class="has-text-warning">${loc('civics_garrison')}</h2> - <span class="has-text-success"><span class="defenseRating">${loc('rating')} {{ g.workers | hell | rating }}</span> / <span class="offenseRating">{{ g.raid | rating }}</span></span> - <span class="soldierRating"><span class="has-text-warning">${loc(`civics_garrison_soldier_rating`)}</span> {{ g.workers | single | rating }}</span></div>`));
     }
 
     var soliders = $(`<div></div>`);
@@ -1307,11 +1322,17 @@ export function buildGarrison(garrison,full){
                         return loc('civics_garrison_tactic_siege');
                 }
             },
-            rating(v){
+            rating(v,scale){
+                if (scale){
+                    return +(armyRating(v,'army',0) / v).toFixed(1);
+                }
                 return +armyRating(v,'army').toFixed(1);
             },
             hell(v){
                 return garrisonSize();
+            },
+            single(v){
+                return global.race['hivemind'] ? traits.hivemind.vars()[0] : 1;
             },
             stationed(v){
                 let size = garrisonSize();
@@ -1335,9 +1356,9 @@ export function buildGarrison(garrison,full){
         }
     });
 
-    ['tactic','bat','soldier','crew','wounded','hmerc','defenseRating','offenseRating'].forEach(function(k){
+    ['tactic','bat','soldier','crew','wounded','hmerc','defenseRating','offenseRating','soldierRating'].forEach(function(k){
         popover(full ? `garrison${k}` : `cGarrison${k}`,
-            function(){ return '<span>{{ label() }}</span>'; },
+            function(){ return '<span v-html="label()"></span>'; },
             {
                 elm: `${full ? '#garrison' : '#c_garrison'} .${k}`,
                 in: function(obj){
@@ -1379,6 +1400,8 @@ export function buildGarrison(garrison,full){
                                         return loc('civics_garrison_defensive_rate');
                                     case 'offenseRating':
                                         return loc('civics_garrison_offensive_rate');
+                                    case 'soldierRating':
+                                        return soldierBreakdown('army');
                                 }
                             }
                         }
@@ -1426,6 +1449,26 @@ export function buildGarrison(garrison,full){
     }
 }
 
+function soldierBreakdown(type){
+    let scale = global.race['hivemind'] ? traits.hivemind.vars()[0] : 1;
+    let data = armyRating(scale,type,0,true);
+
+    let desc = `<div class="soldierEvaluation"><div class="head">${loc(`civics_garrison_soldier_rating`)}</div>`;
+    data.forEach(function(d){
+        if (d.v > 0 || d.v < 0){
+            if (d.k === 'base'){
+                desc += `<div><span>${loc(d.k)}</span> <span class="has-text-success">${d.v}</span></div>`;
+            }
+            else {
+                let val = typeof d.v === 'string' ? parseInt(d.v) : +(d.v * 100).toFixed(1);
+                desc += `<div><span>${loc(d.k)}</span> <span class="has-text-${d.v >= 0 ? 'success' : 'danger'}">${d.v < 0 ? '' : '+'}${val}${typeof d.v === 'string' ? '' : '%'}</span></div>`;
+            }
+        }
+    });
+    desc += `</div>`;
+    return desc;
+}
+
 export function describeSoldier(){
     let rating = armyRating(garrisonSize(),'hunting');
 
@@ -1446,7 +1489,7 @@ export function describeSoldier(){
       ? 'civics_garrison_soldier_evil_desc'
       : 'civics_garrison_soldier_desc';
 
-    return loc(soldiers_desc) + loc(loot_string, loot_args);
+    return `${loc(soldiers_desc)} ${loc(loot_string, loot_args)}`;
 }
 
 function battleAssessment(gov){
@@ -1866,9 +1909,7 @@ function war_campaign(gov){
             }
             if (infected > 0){
                 global.resource[global.race.species].amount += infected;
-                if (global.civic.d_job !== 'unemployed'){
-                    global.civic[global.civic.d_job].workers += infected;
-                }
+                global.civic[global.civic.d_job].workers += infected;
                 if (infected === 1){
                     messageQueue(loc('civics_garrison_soldier_infected'),'special',false,['combat']);
                 }
@@ -2041,6 +2082,9 @@ function lootModify(val,gov){
     if (global.race['gravity_well']){
         loot *= 1 - (0.75 * darkEffect('heavy'));
     }
+    if (global.race['parasite']){
+        loot *= 1 - (traits.parasite.vars()[0] / 100);
+    }
 
     switch(global.civic.garrison.tactic){
         case 1:
@@ -2093,10 +2137,12 @@ export function soldierDeath(v){
     blubberFill(killed);
 }
 
-export function armyRating(val,type,wound){
+export function armyRating(val,type,wound,analysis){
     if (!global.civic.hasOwnProperty('garrison')){
         return 1;
     }
+
+    let data = [];
 
     let wounded = 0;
     if (typeof wound === "number"){
@@ -2114,97 +2160,145 @@ export function armyRating(val,type,wound){
         let fathomVal = rhinoFathom > 0 ? (wounded * traits.rage.vars(1)[1] / 100 * rhinoFathom) : 0;
         adjusted_val = val + rageVal + fathomVal;
     }
+    data.push({ k: 'base', v: adjusted_val });
+    if (global.tech.military){ data.push({ k: 'civics_garrison_weaponry', v: weapon_tech - 1 }); }
     let army = global.tech['military'] ? adjusted_val * weapon_tech : adjusted_val;
     if (type === 'army' || type === 'hellArmy' || type === 'Troops'){
+        if (global.race['tactical']){
+            let tactical = (traits.tactical.vars()[0] * global.race['tactical'] / 100);
+            army *= 1 + tactical;
+            data.push({ k: 'trait_tactical_name', v: tactical });
+        }
+        if (global.tech['fanaticism'] && global.tech['fanaticism'] >= 4){
+            let zealotry = (templeCount() * 0.01);
+            army *= 1 + zealotry;
+            data.push({ k: 'tech_zealotry', v: zealotry });
+        }
         if (global.race['rage']){
-            army *= 1 + (traits.rage.vars()[0] / 100 * (global.civic.garrison.wounded || 0));
+            let rage = (traits.rage.vars()[0] / 100 * (global.civic.garrison.wounded || 0));
+            army *= 1 + rage;
+            data.push({ k: 'trait_rage_name', v: rage });
         }
         if (rhinoFathom > 0){
-            army *= 1 + (traits.rage.vars(1)[0] / 100 * rhinoFathom * (global.civic.garrison.wounded || 0));
+            let rage = (traits.rage.vars(1)[0] / 100 * rhinoFathom * (global.civic.garrison.wounded || 0));
+            army *= 1 + rage;
+            data.push({ k: 'trait_rage_thrall', v: rage });
         }
         if (global.race['puny']){
-            army *= 1 - (traits.puny.vars()[0] / 100);
+            let puny = (traits.puny.vars()[0] / 100);
+            army *= 1 - puny;
+            data.push({ k: 'trait_puny_name', v: -(puny) });
         }
         if (global.race['claws']){
-            army *= 1 + (traits.claws.vars()[0] / 100);
+            let claws = (traits.claws.vars()[0] / 100);
+            army *= 1 + claws;
+            data.push({ k: 'trait_claws_name', v: claws });
         }
         let scorpidFathom = fathomCheck('scorpid');
         if (scorpidFathom > 0){
-            army *= 1 + (traits.claws.vars(1)[0] / 100 * scorpidFathom);
+            let claws = (traits.claws.vars(1)[0] / 100 * scorpidFathom);
+            army *= 1 + claws;
+            data.push({ k: 'trait_claws_thrall', v: claws });
         }
         if (global.race['chameleon']){
-            army *= 1 + (traits.chameleon.vars()[0] / 100);
+            let cham = (traits.chameleon.vars()[0] / 100);
+            army *= 1 + cham;
+            data.push({ k: 'trait_chameleon_name', v: cham });
         }
         if (global.race['cautious'] && global.city.calendar.weather === 0){
-            army *= 1 - (traits.cautious.vars()[0] / 100);
+            let cautious = (traits.cautious.vars()[0] / 100);
+            army *= 1 - cautious;
+            data.push({ k: 'trait_cautious_name', v: -(cautious) });
         }
         if (global.race['apex_predator']){
-            army *= 1 + (traits.apex_predator.vars()[0] / 100);
+            let apex = (traits.apex_predator.vars()[0] / 100);
+            army *= 1 + apex;
+            data.push({ k: 'trait_apex_predator_name', v: apex });
         }
         let sharkinFathom = fathomCheck('sharkin');
         if (sharkinFathom > 0){
-            army *= 1 + (traits.apex_predator.vars(1)[0] / 100 * sharkinFathom);
+            let apex = (traits.apex_predator.vars(1)[0] / 100 * sharkinFathom);
+            army *= 1 + apex;
+            data.push({ k: 'trait_apex_predator_thrall', v: apex });
         }
         if (global.race['swift']){
-            army *= 1 + (traits.swift.vars()[0] / 100);
+            let swift = (traits.swift.vars()[0] / 100);
+            army *= 1 + swift;
+            data.push({ k: 'trait_swift_name', v: swift });
+        }
+        if (global.race['iron_wood']){
+            let iron_wood = (traits.iron_wood.vars()[0] / 100);
+            army *= 1 + iron_wood;
+            data.push({ k: 'trait_iron_wood_name', v: iron_wood });
         }
         if (global.race['fiery']){
-            army *= 1 + (traits.fiery.vars()[0] / 100);
+            let fiery = (traits.fiery.vars()[0] / 100);
+            army *= 1 + fiery;
+            data.push({ k: 'trait_fiery_name', v: fiery });
         }
         let balorgFathom = fathomCheck('balorg');
         if (balorgFathom > 0){
-            army *= 1 + (traits.fiery.vars(1)[0] / 100 * balorgFathom);
+            let fiery = (traits.fiery.vars(1)[0] / 100 * balorgFathom);
+            army *= 1 + fiery;
+            data.push({ k: 'trait_fiery_thrall', v: fiery });
         }
         if (global.race['sticky']){
-            army *= 1 + (traits.sticky.vars()[1] / 100);
+            let sticky = (traits.sticky.vars()[1] / 100);
+            army *= 1 + sticky;
+            data.push({ k: 'trait_sticky_name', v: sticky });
         }
         let pingFathom = fathomCheck('pinguicula');
         if (pingFathom > 0){
-            army *= 1 + (traits.sticky.vars(1)[1] / 100 * pingFathom);
+            let sticky = (traits.sticky.vars(1)[1] / 100 * pingFathom);
+            army *= 1 + sticky;
+            data.push({ k: 'trait_sticky_thrall', v: sticky })
         }
         if (global.race['pathetic']){
-            army *= 1 - (traits.pathetic.vars()[0] / 100);
-        }
-        if (global.race['tactical']){
-            army *= 1 + (traits.tactical.vars()[0] * global.race['tactical'] / 100);
-        }
-        if (global.tech['fanaticism'] && global.tech['fanaticism'] >= 4){
-            army *= 1 + (global.city.temple.count * 0.01);
+            let pathetic = (traits.pathetic.vars()[0] / 100);
+            army *= 1 - pathetic;
+            data.push({ k: 'trait_pathetic_name', v: -(pathetic) });
         }
         if (global.race['holy'] && type === 'hellArmy'){
-            army *= 1 + (traits.holy.vars()[0] / 100);
+            let holy = (traits.holy.vars()[0] / 100);
+            army *= 1 + holy;
+            data.push({ k: 'trait_holy_name', v: holy });
         }
         let unicornFathom = fathomCheck('unicorn');
         if (unicornFathom > 0 && type === 'hellArmy'){
-            army *= 1 + (traits.holy.vars(1)[0] / 100 * unicornFathom);
+            let holy = (traits.holy.vars(1)[0] / 100 * unicornFathom);
+            army *= 1 + holy;
+            data.push({ k: 'trait_holy_thrall', v: holy });
         }
         if (global.race['banana'] && type === 'hellArmy'){
             army *= 0.8;
+            data.push({ k: 'banana', v: -(20) });
         }
         if (astrologySign() === 'aries'){
-            army *= 1 + (astroVal('aries')[0] / 100);
+            let astro = (astroVal('aries')[0] / 100);
+            army *= 1 + astro;
+            data.push({ k: 'sign_aries', v: astro });
         }
         let tacVal = govActive('tactician',0);
         if (tacVal){
-            army *= 1 + (tacVal / 100);
+            let tac = (tacVal / 100);
+            army *= 1 + tac;
+            data.push({ k: 'gov_trait_tactician', v: tac });
         }
         if (global.city.ptrait.includes('rage')){
-            army *= planetTraits.rage.vars()[0];
+            let rage = planetTraits.rage.vars()[0];
+            army *= rage;
+            data.push({ k: 'planet_rage_bd', v: rage - 1 });
         }
         if (global.race['elemental']){
-            army *= 1 + (traits.elemental.vars()[5] / 100);
+            let elemental = (traits.elemental.vars()[5] / 100);
+            army *= 1 + elemental;
+            data.push({ k: 'trait_elemental_name', v: elemental });
         }
         if (global.race['ocular_power'] && global.race['ocularPowerConfig'] && global.race.ocularPowerConfig.d){
             let attack = 50 * (traits.ocular_power.vars()[1] / 100);
-            army *= 1 + (attack / 100);
-        }
-        if (global.race['parasite']){
-            if (val === 1){
-                army += 2;
-            }
-            else if (val > 1){
-                army += 4;
-            }
+            let ocular = (attack / 100);
+            army *= 1 + ocular;
+            data.push({ k: 'trait_ocular_power_name', v: ocular });
         }
         if (global.tech['psychic'] && global.race['psychicPowers'] && global.race.psychicPowers.hasOwnProperty('assaultTime')){
             let boost = 0;
@@ -2216,36 +2310,85 @@ export function armyRating(val,type,wound){
                 boost += +(traits.psychic.vars()[3] / 50000 * rank * global.race.psychicPowers.channel.assault).toFixed(3);
             }
             army *= 1 + boost;
+            data.push({ k: 'tech_psychic_attack', v: boost });
         }
     }
     if (type === 'hunting'){
         if (global.race['unfathomable']){
             army *= 0.66;
+            data.push({ k: 'trait_unfathomable_name', v: -(34) });
         }
         if (global.race['ocular_power'] && global.race['ocularPowerConfig'] && global.race.ocularPowerConfig.w){
             let hunt = 60 * (traits.ocular_power.vars()[1] / 100);
-            army *= 1 + (hunt / 100);
+            let ocular = (hunt / 100);
+            army *= 1 + ocular;
+            data.push({ k: 'trait_ocular_power_name', v: ocular });
         }
     }
     if (global.race['tusk']){
         let bonus = traits.tusk.vars()[1] / 100;
         if (type === 'hellArmy'){ bonus /= 2; }
         army *= 1 + bonus;
+        data.push({ k: 'trait_tusk_name', v: bonus });
     }
     if (global.race['grenadier']){
-        army *= 1 + (traits.grenadier.vars()[0] / 100);
+        let grenadier = (traits.grenadier.vars()[0] / 100);
+        if (type === 'hellArmy' && global.race['warlord']){
+            grenadier *= 0.4;
+        }
+        army *= 1 + grenadier;
+        data.push({ k: 'trait_grenadier_name', v: grenadier });
     }
     if (global.race['rejuvenated']){
         army *= 1.05;
+        data.push({ k: 'rejuvenated', v: 0.05 });
     }
     if (global.civic.govern.type === 'autocracy'){
-        army *= 1 + (govEffect.autocracy()[1] / 100);
+        let auto = (govEffect.autocracy()[1] / 100);
+        army *= 1 + auto;
+        data.push({ k: 'govern_autocracy', v: auto });
+    }
+    if (global.race.universe === 'evil' && global.resource.Authority.display){
+        if (global.resource.Authority.amount > 100){
+            let boost = (global.resource.Authority.amount - 100) / global.resource.Authority.amount * 0.75;
+            boost *= darkEffect('evil',true);
+            army *= 1 + boost;
+            data.push({ k: 'resource_Authority_name', v: boost });
+        }
+        else {
+            let auth = global.resource.Authority.amount / 100;
+            army *= auth;
+            data.push({ k: 'resource_Authority_name', v: -(1 - auth) });
+        }
     }
     army = Math.floor(army);
-    return army * racialTrait(val,type);
+    let racial = racialTrait(val,type);
+    army *= racial;
+
+    if (racial > 1){
+        data.push({ k: 'misc', v: racial - 1 });
+    }
+    else if (racial < 1){
+        data.push({ k: 'misc', v: -(1 - racial) });
+    }
+
+    if ((type === 'army' || type === 'hellArmy' || type === 'Troops') && global.race['parasite']){
+        if (val === 1){
+            army += 2;
+            data.push({ k: 'trait_parasite_name', v: '2' });
+        }
+        else if (val > 1){
+            army += 4;
+            data.push({ k: 'trait_parasite_name', v: '4' });
+        }
+    }
+    
+    if (analysis){ return data; }
+    if (army <= 0 && val > 0){ army = 0.01; }
+    return army;
 }
 
-export function garrisonSize(max, args = {} ){
+export function garrisonSize(max, args = {}){
     if (!global.civic.garrison){
         return 0;
     }
@@ -2253,7 +2396,12 @@ export function garrisonSize(max, args = {} ){
     let fortress = global.portal['fortress'] ? global.portal.fortress.garrison : 0;
     let fob = global.space['fob'] && !args['nofob'] ? global.space.fob.troops : 0;
     let pillbox = global.eden['pillbox'] && !args['nopill'] ? global.eden.pillbox.staffed : 0;
-    return global.civic.garrison[type] - global.civic.garrison.crew - fortress - fob - pillbox;
+    let troops = global.civic.garrison[type] - global.civic.garrison.crew - fortress - fob - pillbox;
+    if (global.race['warlord'] && p_on['soul_forge'] && !args['no_forge']){
+        let forge = soulForgeSoldiers();
+        if (troops >= forge){ troops -= forge; }
+    }
+    return troops;
 }
 
 function defineMad(){

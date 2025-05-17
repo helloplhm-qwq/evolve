@@ -1,7 +1,7 @@
 import { global, tmp_vars, keyMultiplier, breakdown, sizeApproximation, p_on, support_on } from './vars.js';
 import { vBind, clearElement, modRes, flib, calc_mastery, calcPillar, eventActive, easterEgg, trickOrTreat, popover, harmonyEffect, darkEffect, hoovedRename, messageQueue } from './functions.js';
 import { traits, fathomCheck } from './races.js';
-import { templeCount } from './actions.js';
+import { templeCount, actions } from './actions.js';
 import { workerScale } from './jobs.js';
 import { hellSupression } from './portal.js';
 import { syndicate } from './truepath.js';
@@ -311,6 +311,20 @@ export const craftingRatio = (function(){
                         auto: p_on['int_factory'] * 0.1
                     });
                 }
+            }
+            if (global.portal['demon_forge'] && p_on['demon_forge']){
+                crafting.general.add.push({
+                    name: loc(`portal_demon_forge_title`),
+                    manual: 0,
+                    auto: p_on['demon_forge'] * actions.portal.prtl_wasteland.demon_forge.crafting() / 100
+                });
+            }
+            if (global.portal['hell_factory'] && p_on['hell_factory']){
+                crafting.general.add.push({
+                    name: loc(`portal_factory_title`),
+                    manual: p_on['hell_factory'] * 0.25,
+                    auto: p_on['hell_factory'] * 0.25
+                });
             }
             if (global.space['fabrication'] && support_on['fabrication']){
                 crafting.general.add.push({
@@ -669,6 +683,7 @@ export function defineResources(wiki){
     loadResource('Money',wiki,1000,1,false,false,'success');
     loadResource(global.race.species,wiki,0,0,false,false,'warning');
     loadResource('Slave',wiki,0,0,false,false,'warning');
+    loadResource('Authority',wiki,0,0,false,false,'warning');
     loadResource('Mana',wiki,0,1,false,false,'warning');
     loadResource('Energy',wiki,0,0,false,false,'warning');
     loadResource('Sus',wiki,0,0,false,false,'warning');
@@ -811,14 +826,14 @@ function loadResource(name,wiki,max,rate,tradable,stackable,color){
 
     var res_container;
     if (global.resource[name].max === -1 || global.resource[name].max === -2){
-        res_container = $(`<div id="res${name}" class="resource crafted" v-show="display"><h3 class="res has-text-${color}">{{ name | namespace }}</h3><span id="cnt${name}" class="count">{{ amount | diffSize }}</span></div>`);
+        res_container = $(`<div id="res${name}" class="resource crafted" v-show="display"><div><h3 class="res has-text-${color}">{{ name | namespace }}</h3><span id="cnt${name}" class="count">{{ amount | diffSize }}</span></div></div>`);
     }
     else {
-        res_container = $(`<div id="res${name}" class="resource" v-show="display"><h3 class="res has-text-${color}">{{ name | namespace }}</h3><span id="cnt${name}" class="count">{{ amount | size }} / {{ max | size }}</span></div>`);
+        res_container = $(`<div id="res${name}" class="resource" v-show="display"><div><h3 class="res has-text-${color}">{{ name | namespace }}</h3><span id="cnt${name}" class="count">{{ amount | size }} / {{ max | size }}</span></div></div>`);
     }
 
     if (stackable){
-        res_container.append($(`<span><span id="con${name}" v-if="showTrigger()" class="interact has-text-success" @click="trigModal" role="button" aria-label="Open crate management for ${name}">+</span></span>`));
+        res_container.append($(`<span><span id="con${name}" v-if="showTrigger()" class="interact has-text-success" @click="trigModal" role="button" aria-label="Open crate management for ${global.resource[name].name}">+</span></span>`));
     }
     else if (max !== -1 || (max === -1 && rate === 0 && global.race['no_craft']) || name === 'Scarletite' || name === 'Quantium'){
         res_container.append($('<span></span>'));
@@ -834,9 +849,9 @@ function loadResource(name,wiki,max,rate,tradable,stackable,color){
 
         let inc = [1,5];
         for (let i=0; i<inc.length; i++){
-            craft.append($(`<span id="inc${name}${inc[i]}"><a @click="craft('${name}',${inc[i]})" aria-label="craft ${inc[i]} ${name}">+<span class="craft" data-val="${inc[i]}">${inc[i]}</span></a></span>`));
+            craft.append($(`<span id="inc${name}${inc[i]}"><a @click="craft('${name}',${inc[i]})" aria-label="craft ${inc[i]} ${global.resource[name].name}" role="button">+<span class="craft" data-val="${inc[i]}">${inc[i]}</span></a></span>`));
         }
-        craft.append($(`<span id="inc${name}A"><a @click="craft('${name}','A')" aria-label="craft max ${name}">+<span class="craft" data-val="${'A'}">A</span></a></span>`));
+        craft.append($(`<span id="inc${name}A"><a @click="craft('${name}','A')" aria-label="craft max ${global.resource[name].name}" role="button">+<span class="craft" data-val="${'A'}">A</span></a></span>`));
         infopops = true;
     }
     else if(global.race['fasting'] && name === global.race.species){
@@ -872,7 +887,7 @@ function loadResource(name,wiki,max,rate,tradable,stackable,color){
         methods: {
             resRate(n){
                 let diff = sizeApproximation(global.resource[n].diff,2);
-                return `${n} ${diff} per second`;
+                return `${global.resource[name].name} ${diff} per second`;
             },
             trigModal(){
                 this.$buefy.modal.open({
@@ -1206,7 +1221,7 @@ function loadSpecialResource(name,color) {
     }
     color = color || 'special';
 
-    var res_container = $(`<div id="res${name}" class="resource" v-show="count"><span class="res has-text-${color}">${loc(`resource_${name}_name`)}</span><span class="count">{{ count | round }}</span></div>`);
+    var res_container = $(`<div id="res${name}" class="resource" v-show="count"><div><span class="res has-text-${color}">${loc(`resource_${name}_name`)}</span><span class="count">{{ count | round }}</span></div></div>`);
     $('#resources').append(res_container);
 
     vBind({
@@ -1270,7 +1285,7 @@ function loadSpecialResource(name,color) {
                             break;
         
                         case 'evil':
-                            desc.append($(`<span>${loc(`resource_${name}_desc_e`,[+((darkEffect('evil') - 1) * 100).toFixed(2)])}</span>`));
+                            desc.append($(`<span>${loc(`resource_${name}_desc_e`,[+((darkEffect('evil') - 1) * 100).toFixed(2),+((darkEffect('evil',true) - 1) * 100).toFixed(2)])}</span>`));
                             break;
         
                         case 'micro':
@@ -1374,9 +1389,9 @@ export function marketItem(mount,market_item,name,color,full){
     if (full && ((global.race['banana'] && name === 'Food') || (global.tech['trade'] && !global.race['terrifying']))){
         let trade = $(`<span class="trade" v-show="m.active"><span class="has-text-warning">${loc('resource_market_routes')}</span></span>`);
         market_item.append(trade);
-        trade.append($(`<b-tooltip :label="aSell('${name}')" position="is-bottom" size="is-small" multilined animated><span role="button" aria-label="export ${name}" class="sub has-text-danger" @click="autoSell('${name}')"><span>-</span></span></b-tooltip>`));
+        trade.append($(`<b-tooltip :label="aSell('${name}')" position="is-bottom" size="is-small" multilined animated><span role="button" aria-label="export ${global.resource[name].name}" class="sub has-text-danger" @click="autoSell('${name}')"><span>-</span></span></b-tooltip>`));
         trade.append($(`<span class="current" v-html="$options.filters.trade(r.trade)"></span>`));
-        trade.append($(`<b-tooltip :label="aBuy('${name}')" position="is-bottom" size="is-small" multilined animated><span role="button" aria-label="import ${name}" class="add has-text-success" @click="autoBuy('${name}')"><span>+</span></span></b-tooltip>`));
+        trade.append($(`<b-tooltip :label="aBuy('${name}')" position="is-bottom" size="is-small" multilined animated><span role="button" aria-label="import ${global.resource[name].name}" class="add has-text-success" @click="autoBuy('${name}')"><span>+</span></span></b-tooltip>`));
         trade.append($(`<span role="button" class="zero has-text-advanced" @click="zero('${name}')">${loc('cancel_routes')}</span>`));
         tradeRouteColor(name);
     }
@@ -1408,6 +1423,13 @@ export function marketItem(mount,market_item,name,color,full){
                 }
                 if (global.race['persuasive']){
                     rate *= 1 + (global.race['persuasive'] / 100);
+                }
+                if (astroSign === 'capricorn'){
+                    rate *= 1 + (astroVal('capricorn')[0] / 100);
+                }
+                if (global.race['ocular_power'] && global.race['ocularPowerConfig'] && global.race.ocularPowerConfig.c){
+                    let trade = 70 * (traits.ocular_power.vars()[1] / 100);
+                    rate *= 1 + (trade / 100);
                 }
                 if (global.race['devious']){
                     rate *= 1 - (traits.devious.vars()[0] / 100);
@@ -1858,21 +1880,21 @@ export function containerItem(mount,market_item,name,color){
     market_item.append($(`<h3 class="res has-text-${color}">{{ name }}</h3>`));
 
     if (global.resource.Crates.display){
-        let crate = $(`<span class="trade"><span class="has-text-warning">${loc('resource_Crates_name')}</span></span>`);
+        let crate = $(`<span class="trade"><span class="has-text-warning">${global.resource.Crates.name}</span></span>`);
         market_item.append(crate);
 
-        crate.append($(`<span role="button" aria-label="remove ${name} ${loc('resource_Crates_name')}" class="sub has-text-danger" @click="subCrate('${name}')"><span>&laquo;</span></span>`));
+        crate.append($(`<span role="button" aria-label="remove ${global.resource[name].name} ${global.resource.Crates.name}" class="sub has-text-danger" @click="subCrate('${name}')"><span>&laquo;</span></span>`));
         crate.append($(`<span class="current" v-html="$options.filters.cCnt(crates,'${name}')"></span>`));
-        crate.append($(`<span role="button" aria-label="add ${name} ${loc('resource_Crates_name')}" class="add has-text-success" @click="addCrate('${name}')"><span>&raquo;</span></span>`));
+        crate.append($(`<span role="button" aria-label="add ${global.resource[name].name} ${global.resource.Crates.name}" class="add has-text-success" @click="addCrate('${name}')"><span>&raquo;</span></span>`));
     }
 
     if (global.resource.Containers.display){
-        let container = $(`<span class="trade"><span class="has-text-warning">${loc('resource_Containers_name')}</span></span>`);
+        let container = $(`<span class="trade"><span class="has-text-warning">${global.resource.Containers.name}</span></span>`);
         market_item.append(container);
 
-        container.append($(`<span role="button" aria-label="remove ${name} ${loc('resource_Containers_name')}" class="sub has-text-danger" @click="subCon('${name}')"><span>&laquo;</span></span>`));
+        container.append($(`<span role="button" aria-label="remove ${global.resource[name].name} ${global.resource.Containers.name}" class="sub has-text-danger" @click="subCon('${name}')"><span>&laquo;</span></span>`));
         container.append($(`<span class="current" v-html="$options.filters.trick(containers)"></span>`));
-        container.append($(`<span role="button" aria-label="add ${name} ${loc('resource_Containers_name')}" class="add has-text-success" @click="addCon('${name}')"><span>&raquo;</span></span>`));
+        container.append($(`<span role="button" aria-label="add ${global.resource[name].name} ${global.resource.Containers.name}" class="add has-text-success" @click="addCon('${name}')"><span>&raquo;</span></span>`));
     }
 
     vBind({
@@ -2338,7 +2360,7 @@ function loadContainerCounter(){
         return;
     }
 
-    var market_item = $(`<div id="crateTotal" class="market-item"><span v-show="cr.display" class="crtTotal"><span class="has-text-warning">${loc('resource_Crates_name')}</span><span>{{ cr.amount }} / {{ cr.max }}</span></span><span v-show="cn.display" class="cntTotal"><span class="has-text-warning">${loc('resource_Containers_name')}</span><span>{{ cn.amount }} / {{ cn.max }}</span></span></div>`);
+    var market_item = $(`<div id="crateTotal" class="market-item"><span v-show="cr.display" class="crtTotal"><span class="has-text-warning">${global.resource.Crates.name}</span><span>{{ cr.amount }} / {{ cr.max }}</span></span><span v-show="cn.display" class="cntTotal"><span class="has-text-warning">${global.resource.Containers.name}</span><span>{{ cn.amount }} / {{ cn.max }}</span></span></div>`);
     $('#resStorage').append(market_item);
 
     vBind({
@@ -2366,8 +2388,9 @@ function tradeRouteColor(res){
 }
 
 function buildCrateLabel(){
-    let material = global.race['kindling_kindred'] || global.race['smoldering'] ? (global.race['smoldering'] ? global.resource.Chrysotile.name : global.resource.Stone.name) : (global.resource['Plywood'] ? global.resource.Plywood.name : loc('resource_Plywood_name'));
-    let cost = global.race['kindling_kindred'] || global.race['smoldering'] ? 200 : 10
+    let material = global.race['kindling_kindred'] || global.race['smoldering'] ? (global.race['smoldering'] ? global.resource.Chrysotile.name : global.resource.Stone.name) : (global.resource['Plywood'] ? global.resource.Plywood.name : global.resource.Plywood.name);
+    if (global.race['iron_wood']){ material = global.resource.Lumber.name; }
+    let cost = global.race['kindling_kindred'] || global.race['smoldering'] || global.race['iron_wood'] ? 200 : 10
     return loc('resource_modal_crate_construct_desc',[cost,material,crateValue()]);
 }
 
@@ -2389,7 +2412,8 @@ export function crateGovHook(type,num){
 function buildCrate(num){
     let keyMutipler = num || keyMultiplier();
     let material = global.race['kindling_kindred'] || global.race['smoldering'] ? (global.race['smoldering'] ? 'Chrysotile' : 'Stone') : 'Plywood';
-    let cost = global.race['kindling_kindred'] || global.race['smoldering'] ? 200 : 10;
+    if (global.race['iron_wood']){ material = 'Lumber'; }
+    let cost = global.race['kindling_kindred'] || global.race['smoldering'] || global.race['iron_wood'] ? 200 : 10;
     if (keyMutipler + global.resource.Crates.amount > global.resource.Crates.max){
         keyMutipler = global.resource.Crates.max - global.resource.Crates.amount;
     }
@@ -2792,9 +2816,9 @@ export function loadEjector(name,color){
         let res = $(`<span class="trade"></span>`);
         ejector.append(res);
 
-        res.append($(`<span role="button" aria-label="eject less ${loc('resource_'+name+'_name')}" class="sub has-text-danger" @click="ejectLess('${name}')"><span>&laquo;</span></span>`));
+        res.append($(`<span role="button" aria-label="eject less ${global.resource[name].name}" class="sub has-text-danger" @click="ejectLess('${name}')"><span>&laquo;</span></span>`));
         res.append($(`<span class="current">{{ e.${name} }}</span>`));
-        res.append($(`<span role="button" aria-label="eject more ${loc('resource_'+name+'_name')}" class="add has-text-success" @click="ejectMore('${name}')"><span>&raquo;</span></span>`));
+        res.append($(`<span role="button" aria-label="eject more ${global.resource[name].name}" class="add has-text-success" @click="ejectMore('${name}')"><span>&raquo;</span></span>`));
 
         res.append($(`<span class="mass">${loc('interstellar_mass_ejector_per')}: <span class="has-text-warning">${atomic_mass[name]}</span> kt</span>`));
 
@@ -2927,9 +2951,9 @@ export function loadAlchemy(name,color,basic){
         let res = $(`<span class="trade"></span>`);
         alchemy.append(res);
 
-        res.append($(`<span role="button" aria-label="transmute less ${loc('resource_'+name+'_name')}" class="sub has-text-danger" @click="subSpell('${name}')"><span>&laquo;</span></span>`));
+        res.append($(`<span role="button" aria-label="transmute less ${global.resource[name].name}" class="sub has-text-danger" @click="subSpell('${name}')"><span>&laquo;</span></span>`));
         res.append($(`<span class="current">{{ a.${name} }}</span>`));
-        res.append($(`<span role="button" aria-label="transmute more ${loc('resource_'+name+'_name')}" class="add has-text-success" @click="addSpell('${name}')"><span>&raquo;</span></span>`));
+        res.append($(`<span role="button" aria-label="transmute more ${global.resource[name].name}" class="add has-text-success" @click="addSpell('${name}')"><span>&raquo;</span></span>`));
 
         if (!global.race.alchemy.hasOwnProperty(name)){
             global.race.alchemy[name] = 0;
@@ -2944,26 +2968,18 @@ export function loadAlchemy(name,color,basic){
             methods: {
                 addSpell(spell){
                     let keyMult = keyMultiplier();
-                    for (let i=0; i<keyMult; i++){
-                        if (global.resource.Mana.diff >= 1){
-                            global.race.alchemy[spell]++;
-                            global.resource.Mana.diff--;
-                        }
-                        else {
-                            break;
-                        }
+                    let change = Math.min(Math.floor(global.resource.Mana.diff), keyMult);
+                    if (change > 0) {
+                        global.race.alchemy[spell] += change;
+                        global.resource.Mana.diff -= change;
                     }
                 },
                 subSpell(spell){
                     let keyMult = keyMultiplier();
-                    for (let i=0; i<keyMult; i++){
-                        if (global.race.alchemy[spell] > 0){
-                            global.race.alchemy[spell]--;
-                            global.resource.Mana.diff++;
-                        }
-                        else {
-                            break;
-                        }
+                    let change = Math.min(global.race.alchemy[spell], keyMult);
+                    if (change > 0) {
+                        global.race.alchemy[spell] -= change;
+                        global.resource.Mana.diff += change;
                     }
                 },
             }
@@ -2997,8 +3013,8 @@ export const spatialReasoning = (function(){
             global.race['nerfed'] || '0',
             global.genes['store'] || '0',
             global.genes['bleed'] || '0',
-            global.city['temple'] ? global.city.temple.count : '0',
-            global.space['ziggurat'] ? global.space.ziggurat.count : '0',
+            templeCount(false) || '0',
+            templeCount(true) || '0',
             global.race['cataclysm'] ? global.race.cataclysm : '0',
             global.race['orbit_decayed'] ? global.race.orbit_decayed : '0',
             global.genes['ancients'] || '0',
@@ -3010,7 +3026,6 @@ export const spatialReasoning = (function(){
         }
         if (!spatial[tkey][key] || recalc){            
             let modifier = 1;
-            let noEarth = global.race['cataclysm'] || global.race['orbit_decayed'] ? true : false;
             if (global.genes['store']){
                 let plasmids = 0;
                 if (!type || (type && ((type === 'plasmid' && global.race.universe !== 'antimatter') || (type === 'anti' && global.race.universe === 'antimatter')))){
@@ -3045,7 +3060,7 @@ export const spatialReasoning = (function(){
             if (global.race.universe === 'standard'){
                 modifier *= darkEffect('standard');
             }
-            if (global.race.universe === 'antimatter' && ((!noEarth && global.city['temple'] && global.city['temple'].count) || (noEarth && global.space['ziggurat'] && global.space['ziggurat'].count))){
+            if (global.race.universe === 'antimatter' && faithTempleCount()){
                 let temple = 0.06;
                 if (global.genes['ancients'] && global.genes['ancients'] >= 2 && global.civic.priest.display){
                     let priest = global.genes['ancients'] >= 5 ? 0.0012 : (global.genes['ancients'] >= 3 ? 0.001 : 0.0008);
@@ -3054,7 +3069,7 @@ export const spatialReasoning = (function(){
                     }
                     temple += priest * global.civic.priest.workers;
                 }
-                modifier *= 1 + ((noEarth ? global.space.ziggurat.count : global.city.temple.count) * temple);
+                modifier *= 1 + (faithTempleCount() * temple);
             }
             if (!type){
                 if (global['pillars']){
@@ -3069,16 +3084,9 @@ export const spatialReasoning = (function(){
     }
 })();
 
-function faithTempleCount(){
-    let num_temples = 0;
+export function faithTempleCount(){
     let noEarth = global.race['cataclysm'] || global.race['orbit_decayed'] ? true : false;
-    if (noEarth && global.space['ziggurat']){
-        num_temples = templeCount(true);
-    }
-    else if (global.city['temple']){
-        num_temples = templeCount(false);
-    }
-    return num_temples;
+    return templeCount(noEarth);
 }
 
 export function faithBonus(num_temples = -1){
@@ -3186,8 +3194,8 @@ export const plasmidBonus = (function (){
             global.race['nerfed'] || '0',
             global.race['no_plasmid'] || '0',
             global.genes['ancients'] || '0',
-            global.city['temple'] ? global.city.temple.count : '0',
-            global.space['ziggurat'] ? global.space.ziggurat.count : '0',
+            templeCount(false) || '0',
+            templeCount(true) || '0',
             global.civic['priest'] ? global.civic.priest.workers : '0',
             global.race['orbit_decayed'] ? global.race.orbit_decayed : '0',
             global.race['spiritual'] || '0',

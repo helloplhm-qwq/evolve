@@ -234,6 +234,8 @@ export function seasonDesc(type){
             return astrologyDescription();
         case 'astrology':
             return astrologySymbol();
+        case 'season':
+            return seasonDescription();
     }
 }
 
@@ -298,13 +300,16 @@ export function astroVal(sign){
     let boosted = global.race['wish'] && global.race['wishStats'] && global.race.wishStats.astro ? true : false;
     let multiplier = 1;
     if (global.race['astrologer']){
-        multiplier += traits.astrologer.vars()[0] / 100;
+        multiplier += global.race['unfavored'] ? -(traits.astrologer.vars()[0] / 100) : traits.astrologer.vars()[0] / 100;
+    }
+    if (global.race['unfavored']){
+        multiplier *= -(traits.unfavored.vars()[0] / 100);
     }
     switch (sign){
         case 'aries': // Combat Rating
             return [boosted ? Math.round(12 * multiplier) : Math.round(10 * multiplier)];
         case 'taurus': // Unification Bonus
-            return [boosted ? 3 * multiplier : 2 * multiplier];
+            return [+(boosted ? 3 * multiplier : 2 * multiplier).toFixed(2)];
         case 'gemini': // Knowledge
             return [boosted ? Math.round(30 * multiplier) : Math.round(20 * multiplier)];
         case 'cancer': // Soldier Healing
@@ -382,14 +387,30 @@ function astrologyDescription(){
 
 function astroEffect(sign){
     if (sign === 'pisces' || sign === 'cancer'){
-        return loc(`sign_${sign}_effect`);
+        return global.race['unfavored'] ? loc(`sign_${sign}_unfavored`) : loc(`sign_${sign}_effect`);
+    }
+    else if (sign === 'scorpio' && global.race['unfavored']){
+        return loc(`sign_${sign}_unfavored`,[-(astroVal(sign)[0])]);
     }
     else {
-        return loc(`sign_${sign}_effect`,[astroVal(sign)[0]]);
+        return global.race['unfavored'] ? loc(`sign_${sign}_unfavored`,[astroVal(sign)[0]]) : loc(`sign_${sign}_effect`,[astroVal(sign)[0]]);
     }
 }
 
 function astrologySymbol(){
     let sign = astrologySign();
     return loc(`sign_${sign}_symbol`);
+}
+
+function seasonDescription() {
+    switch (global.city.calendar.season) {
+        case 0:
+            return loc('season_spring');
+        case 1:
+            return loc('season_summer');
+        case 2:
+            return loc('season_autumn');
+        case 3:
+            return loc('season_winter');
+    }
 }
