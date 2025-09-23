@@ -7,10 +7,11 @@ import { jobScale, job_desc, loadFoundry, limitCraftsmen } from './jobs.js';
 import { production, highPopAdjust } from './prod.js';
 import { actions, payCosts, powerOnNewStruct, setAction, drawTech, bank_vault, buildTemplate, casinoEffect, housingLabel, structName, initStruct } from './actions.js';
 import { fuel_adjust, int_fuel_adjust, spaceTech, renderSpace, checkRequirements, incrementStruct, planetName } from './space.js';
-import { removeTask, govActive } from './governor.js';
-import { defineIndustry, nf_resources, addSmelter } from './industry.js';
+import { defineGovernor, removeTask, govActive } from './governor.js';
+import { defineIndustry, nf_resources, addSmelter, setupRituals, cancelRituals } from './industry.js';
 import { arpa } from './arpa.js';
 import { matrix, retirement, gardenOfEden } from './resets.js';
+import { traitCostMod } from './races.js';
 import { loc } from './locale.js';
 
 const outerTruth = {
@@ -386,9 +387,9 @@ const outerTruth = {
             reqs: { titan: 6 },
             path: ['truepath'],
             cost: {
-                Money(offset){ return spaceCostMultiplier('titan_bank', offset, 2500000, 1.32); },
-                Titanium(offset){ return spaceCostMultiplier('titan_bank', offset, 380000, 1.32); },
-                Neutronium(offset){ return spaceCostMultiplier('titan_bank', offset, 5000, 1.32); }
+                Money(offset){ return spaceCostMultiplier('titan_bank', offset, traitCostMod('untrustworthy',2500000), 1.32); },
+                Titanium(offset){ return spaceCostMultiplier('titan_bank', offset, traitCostMod('untrustworthy',380000), 1.32); },
+                Neutronium(offset){ return spaceCostMultiplier('titan_bank', offset, traitCostMod('untrustworthy',5000), 1.32); }
             },
             effect(){
                 let vault = bank_vault() * 2;
@@ -4530,7 +4531,7 @@ export function shipPower(ship, wiki){
             break;
     }
 
-    watts = Math.round(powerModifier(watts));
+    watts = Math.round(Math.max(watts, powerModifier(watts)));
 
     switch (ship.weapon){
         case 'railgun':
@@ -5041,7 +5042,7 @@ function drawShips(){
         if (global.space.shipyard.expand){
             let ship_class = `${loc(`outer_shipyard_engine_${ship.engine}`)} ${loc(`outer_shipyard_class_${ship.class}`)}`;
             let desc = $(`<div id="shipReg${i}" class="shipRow ship${i}"></div>`);
-            let row1 = $(`<div class="row1"><span class="name has-text-caution">${ship.name}</span> <span v-show="scrapAllowed(${i})">| </span><a class="scrap${i}" v-show="scrapAllowed(${i})" @click="scrap(${i})">${loc(`outer_shipyard_scrap`)}</a> | <span class="has-text-warning">${ship_class}</span> | <span class="has-text-danger">${loc(`outer_shipyard_weapon_${ship.weapon}`)}</span> | <span class="has-text-warning">${loc(`outer_shipyard_power_${ship.power}`)}</span> | <span class="has-text-warning">${loc(`outer_shipyard_armor_${ship.armor}`)}</span> | <span class="has-text-warning">${loc(`outer_shipyard_sensor_${ship.sensor}`)}</span></div>`);
+            let row1 = $(`<div class="row1"><span class="name has-text-caution">${ship.name}</span> <span v-show="scrapAllowed(${i})">| </span><a class="scrap${i}" v-show="scrapAllowed(${i})" @click="scrap(${i})" role="button">${loc(`outer_shipyard_scrap`)}</a> | <span class="has-text-warning">${ship_class}</span> | <span class="has-text-danger">${loc(`outer_shipyard_weapon_${ship.weapon}`)}</span> | <span class="has-text-warning">${loc(`outer_shipyard_power_${ship.power}`)}</span> | <span class="has-text-warning">${loc(`outer_shipyard_armor_${ship.armor}`)}</span> | <span class="has-text-warning">${loc(`outer_shipyard_sensor_${ship.sensor}`)}</span></div>`);
             let row2 = $(`<div class="row2"></div>`);
             let row3 = $(`<div class="row3"></div>`);
             let row4 = $(`<div class="location">${dispatch}</div>`);
@@ -5551,7 +5552,7 @@ export function jumpGateShutdown(){
     Object.keys(actions.city).forEach(function (k){
         if (global.city.hasOwnProperty(k) && global.city[k].hasOwnProperty('count')){
             if (global.race['hooved']){
-                if (actions.city[k].cost.hasOwnProperty('Horseshoe')){
+                if (actions.city[k].cost?.hasOwnProperty('Horseshoe')){
                     global.race['shoecnt'] -= actions.city[k].cost.Horseshoe() * global.city[k].count;
                 }
             }
@@ -5571,7 +5572,7 @@ export function jumpGateShutdown(){
         Object.keys(actions.space[sector]).forEach(function (k){
             if (global.space.hasOwnProperty(k) && global.space[k].hasOwnProperty('count')){
                 if (global.race['hooved']){
-                    if (actions.space[sector][k].cost.hasOwnProperty('Horseshoe')){
+                    if (actions.space[sector][k].cost?.hasOwnProperty('Horseshoe')){
                         global.race['shoecnt'] -= actions.space[sector][k].cost.Horseshoe() * global.space[k].count;
                     }
                 }
@@ -5657,11 +5658,7 @@ export function jumpGateShutdown(){
 
     if (global.tech['magic'] && global.tech.magic >= 2){
         global.tauceti['pylon'] = { count: 0 };
-        if (global.race['casting']){
-            Object.keys(global.race.casting).forEach(function (c){
-                global.race.casting[0] = 0;
-            });
-        }
+        cancelRituals();
     }
 
     initStruct(tauCetiModules.tau_home.tauceti_casino);
@@ -5672,6 +5669,8 @@ export function jumpGateShutdown(){
 
     removeTask('spy');
     removeTask('spyop');
+    removeTask('combo_spy');
+    defineGovernor();
 
     clearElement($(`#infoTimer`));
     global.race['inactive'] = inactive;
@@ -5792,17 +5791,7 @@ export function loneSurvivor(){
             global.resource.Crystal.display = true;
             global.civic.crystal_miner.display = true;
             global.tauceti['pylon'] = { count: 0 };
-            global.race['casting'] = {
-                farmer: 0,
-                miner: 0,
-                lumberjack: 0,
-                science: 0,
-                factory: 0,
-                army: 0,
-                hunting: 0,
-                crafting: 0,
-                total: 0,
-            };
+            setupRituals(true);
         }
         if(global.race.universe === 'evil'){
             global.tech['reclaimer'] = 1;

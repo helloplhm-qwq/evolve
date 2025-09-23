@@ -3784,7 +3784,7 @@ function buildEnemyFortress(parent){
 
     let enemy = $(`<div v-for="(e, index) of enemy" :key="index" class="enemyFortress">
         <div class="fortRow"><span class="has-text-success">{{ e.r | species }}</span><span class="has-text-warning">${loc(`fortress_wall`)} {{ e.f }}%</span></div>
-        <div class="fortRow second"><span class="has-text-caution">${loc(`fortress_demon_kills`)} {{ e.k | kills }}</span><a class="button" v-on:click="attack(index)">${loc(`civics_garrison_attack`)}</a></div>
+        <div class="fortRow second"><span class="has-text-caution">${loc(`fortress_demon_kills`)} {{ e.k | kills }}</span><a class="button" v-on:click="attack(index)" role="button">${loc(`civics_garrison_attack`)}</a></div>
     </div>`);
     fort.append(enemy);
 
@@ -4577,7 +4577,7 @@ export function bloodwar(){
     // Surveyor threats
     if (global.civic.hell_surveyor.display && global.civic.hell_surveyor.workers > 0){
         let divisor = 1000;
-        let painVal = govActive('nopain',1);
+        let painVal = govActive('runner',0);
         if (painVal){
             divisor *= 1 + (painVal / 100);
         }
@@ -5051,7 +5051,7 @@ function addHellEnemy(type = [], allowRecursion = true, allowRepeat = false){
 }
 
 function soulCapacitor(souls){
-    if (global.race['witch_hunter'] && global.portal.hasOwnProperty('soul_capacitor') && p_on['soul_capacitor'] > 0){
+    if (global.race['witch_hunter'] && global.portal.hasOwnProperty('soul_capacitor')){
         global.portal.soul_capacitor.energy += souls;
         if (global.portal.soul_capacitor.energy > global.portal.soul_capacitor.ecap){
             global.portal.soul_capacitor.energy = global.portal.soul_capacitor.ecap;
@@ -6962,7 +6962,7 @@ function drawMechs(){
 
     list.append(`
       <div v-for="(mech, index) of mechs" :key="index" class="mechRow" :class="index < active ? '' : 'inactive-row' ">
-        <a class="scrap" @click="scrap(index)">${loc(global.race['warlord'] ? 'portal_mech_unsummon' : 'portal_mech_scrap')}</a>
+        <a class="scrap" @click="scrap(index)" role="button">${loc(global.race['warlord'] ? 'portal_mech_unsummon' : 'portal_mech_scrap')}</a>
         <span> | </span><span>${loc(global.race['warlord'] ? 'portal_demon' : 'portal_mech')} #{{index + 1}}: </span>
         <span class="has-text-caution">{{ mech.infernal ? "${loc('portal_mech_infernal')} " : "" }}{{ mech | size }} {{ mech | chassis }}</span>
         <div :class="'gearList '+mech.size">
@@ -7268,7 +7268,7 @@ function statusEffect(mech,effect){
             break;
         case 'radioactive':
             {
-                if (!mech.equip.includes('shields') && mech.equip.includes('manashield')){
+                if (!mech.equip.includes('shields') && !mech.equip.includes('manashield')){
                     rating = 0.5;
                 }
             }
@@ -7359,11 +7359,13 @@ function statusEffect(mech,effect){
                         break;
                     case 'cyberdemon':
                         rating = 0.5;
+                        break;
                     case 'large':
                         rating = 0.45;
                         break;
                     case 'archfiend':
                         rating = 0.35;
+                        break;
                     case 'titan':
                         rating = 0.25;
                         break;
@@ -7378,7 +7380,7 @@ function statusEffect(mech,effect){
             break;
     }
     if (mech.equip.includes('lucky')){
-        rating += 0.01 * Math.floor(seededRandom(1,10,false, global.stats.resets + (global.portal?.spire?.count || 1) * 42 ));
+        rating += 0.01 * Math.floor(seededRandom(1,10,false, global.stats.reset + (global.portal?.spire?.count || 1) * 42 ));
         if (rating > 1){ rating = 1; }
     }
     return rating;

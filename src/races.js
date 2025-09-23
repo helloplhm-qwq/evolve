@@ -1,4 +1,4 @@
-import { global, seededRandom, save, webWorker, power_generated, keyMultiplier, sizeApproximation } from './vars.js';
+import { global, seededRandom, save, webWorker, power_generated, keyMultiplier, sizeApproximation, active_rituals } from './vars.js';
 import { loc } from './locale.js';
 import { defineIndustry } from './industry.js';
 import { setJobName, jobScale, loadFoundry } from './jobs.js';
@@ -6698,7 +6698,7 @@ export function racialTrait(workers,type){
         if (global.race['dark_dweller'] && global.city.calendar.weather === 2){
             modifier *= 1 - traits.dark_dweller.vars()[0] / 100;
         }
-        if(global.city.banquet && global.city.banquet.on && global.city.banquet.count >= 3){
+        if(global.city.banquet && global.city.banquet.on && global.city.banquet.level >= 3){
             modifier *= 1 + (global.city.banquet.strength ** 0.65) / 100;
         }
     }
@@ -6715,8 +6715,8 @@ export function racialTrait(workers,type){
         if (global.race['witch_hunter']){
             modifier *= 0.75;
         }
-        if (global.race.hasOwnProperty('casting') && global.race.casting[type === 'hellArmy' ? 'army' : type]){
-            let boost = global.race.casting[type === 'hellArmy' ? 'army' : type];
+        if (global.race.hasOwnProperty('casting') && active_rituals[type === 'hellArmy' ? 'army' : type]){
+            let boost = active_rituals[type === 'hellArmy' ? 'army' : type];
             if (global.race['witch_hunter']){
                 modifier *= 1 + (boost / (boost + 75) * 2.5);
             }
@@ -6726,7 +6726,8 @@ export function racialTrait(workers,type){
         }
     }
     if ((global.race['living_tool'] || global.race['tusk']) && type === 'miner'){
-        let tusk = global.race['tusk'] ? 1 + ((traits.tusk.vars()[0] / 100) * (armyRating(jobScale(1),'army',0) / 100)) : 1;
+        const balance = global.race['hivemind'] ? traits.hivemind.vars()[0] : 1;
+        let tusk = global.race['tusk'] ? 1 + ((traits.tusk.vars()[0] / 100) * (armyRating(jobScale(balance),'army',0) / balance / 100)) : 1;
         let lt = global.race['living_tool'] ? 1 + traits.living_tool.vars()[0] * (global.tech['science'] && global.tech.science > 0 ? global.tech.science * 0.12 : 0) : 1;
         modifier *= lt > tusk ? lt : tusk;
     }
@@ -6845,6 +6846,7 @@ function purgeLumber(){
     if (global.race['casting']){
         global.race.casting.total -= global.race.casting.lumberjack;
         global.race.casting.lumberjack = 0;
+        active_rituals.lumberjack = 0;
         defineIndustry();
     }
     if (global.city['s_alter']) {
@@ -7036,6 +7038,7 @@ function adjustFood() {
         if (!farmersEnabled) {
             global.race.casting.total -= global.race.casting.farmer;
             global.race.casting.farmer = 0;
+            active_rituals.farmer = 0;
         }
         defineIndustry();
     }
@@ -7206,6 +7209,8 @@ export function cleanAddTrait(trait){
             }
             removeTask('spy');
             removeTask('spyop');
+            removeTask('combo_spy');
+            defineGovernor();
             break;
         case 'noble':
             if (global.civic.taxes.tax_rate < 10) {
@@ -8898,7 +8903,7 @@ function majorWish(parent){
                     else {
                         switch(spell){
                             case 'flower':
-                                messageQueue(loc('wish_peace_flower',[govTitle(spell.substring(3))]),'warning',false,['events']);
+                                messageQueue(loc('wish_peace_flower'),'warning',false,['events']);
                                 break;
                             case 'gov3':
                                 global.civic.foreign[spell].hstl = 0;
@@ -9253,7 +9258,7 @@ function psychicKill(parent){
                     global.stats.psykill++;
                     blubberFill(1);
                     if (global.race['anthropophagite']){
-                        modRes('Food', 10000 * traits.anthropophagite.vars()[0]);
+                        modRes('Food', 10000 * traits.anthropophagite.vars()[0], true);
                     }
                     if (global.stats.psykill === 10){
                         renderPsychicPowers();
