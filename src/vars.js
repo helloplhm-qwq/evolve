@@ -60,6 +60,7 @@ export var message_logs = {
 };
 export const message_filters = ['all','progress','queue','building_queue','research_queue','combat','spy','events','major_events','minor_events','achievements','hell'];
 export var callback_queue = new Map();
+export var active_rituals = {};
 
 Math.rand = function(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
@@ -1259,9 +1260,16 @@ if (convertVersion(global['version']) < 104008){
     }
 }
 
+if (convertVersion(global['version']) < 104009){
+    if(global.city['banquet'] && !global.city['banquet'].level){
+        global.city['banquet'].level = global.city['banquet'].count;
+        global.city['banquet'].count = Math.min(1, global.city['banquet'].count);
+    }
+}
 
 
-global['version'] = '1.4.8';
+
+global['version'] = '1.4.9';
 delete global['revision'];
 delete global['beta'];
 
@@ -1534,6 +1542,9 @@ if (typeof global.settings.boring === 'undefined'){
 if (!global.settings.hasOwnProperty('mtorder')){
     global.settings['mtorder'] = [];
 }
+if (!global.settings.hasOwnProperty('resBar')){
+    global.settings['resBar'] = {};
+}
 
 export function setupStats(){
     // Stat Counters
@@ -1769,16 +1780,6 @@ if (typeof global.civic.foreign.gov1['name'] !== "undefined" && global.civic.for
 }
 if (typeof global.civic.foreign.gov2['name'] !== "undefined" && global.civic.foreign.gov2.name.s1 === 'evo_organism_title'){
     global.civic.foreign.gov2.name.s1 = 'Divine';
-}
-
-if (!global.race['evil'] && global.race['immoral'] && global.race !== undefined && global.race.species !== 'wendigo'){
-    delete global.race['immoral'];
-}
-else if (global.race !== undefined && global.race.species === 'wendigo'){
-    const date = new Date();
-    if (global.settings.hasOwnProperty('boring') && !global.settings.boring && date.getMonth() === 11 && date.getDate() >= 17){
-        global.race['immoral'] = 3;
-    }
 }
 
 {
